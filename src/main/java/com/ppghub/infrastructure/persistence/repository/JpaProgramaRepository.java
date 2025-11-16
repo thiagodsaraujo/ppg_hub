@@ -39,7 +39,7 @@ public interface JpaProgramaRepository extends JpaRepository<ProgramaEntity, Lon
      * Busca programas com conceito CAPES mínimo
      */
     @Query("SELECT p FROM ProgramaEntity p WHERE p.conceitoCapes >= :conceito ORDER BY p.conceitoCapes DESC")
-    List<ProgramaEntity> findByConceito MinimoCapes(@Param("conceito") Integer conceito);
+    List<ProgramaEntity> findByConceitoMinimoCapes(@Param("conceito") Integer conceito);
 
     /**
      * Busca programas ativos por instituição
