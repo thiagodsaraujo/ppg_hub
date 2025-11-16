@@ -1,0 +1,98 @@
+# =============================================================================
+# Multi-stage Dockerfile para Produção - PPG Hub
+# =============================================================================
+# Build otimizado em duas etapas:
+# 1. Builder: Compila o projeto com Maven
+# 2. Runtime: Executa a aplicação com JRE minimal
+# =============================================================================
+
+# ==================== STAGE 1: BUILD ====================
+FROM maven:3.9-eclipse-temurin-17-alpine AS builder
+
+LABEL stage=builder
+LABEL maintainer="PPG Hub Team"
+
+# Definir diretório de trabalho
+WORKDIR /build
+
+# Copiar apenas pom.xml primeiro para cache de dependências
+COPY pom.xml .
+
+# Download de dependências (cache layer)
+RUN mvn dependency:go-offline -B
+
+# Copiar código fonte
+COPY src ./src
+
+# Build da aplicação (skip tests para build mais rápido em produção)
+# Tests devem ser executados no CI/CD pipeline antes do build
+RUN mvn clean package -DskipTests -B \
+    && mv target/*.jar target/app.jar
+
+# ==================== STAGE 2: RUNTIME ====================
+FROM eclipse-temurin:17-jre-alpine
+
+LABEL maintainer="PPG Hub Team"
+LABEL description="PPG Hub - Sistema de Gestão de Programas de Pós-Graduação"
+LABEL version="1.0"
+
+# Criar usuário não-root para segurança
+RUN addgroup -g 1001 -S ppghub && \
+    adduser -u 1001 -S ppghub -G ppghub
+
+# Instalar dependências necessárias
+RUN apk add --no-cache \
+    curl \
+    wget \
+    tzdata \
+    && cp /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime \
+    && echo "America/Sao_Paulo" > /etc/timezone \
+    && apk del tzdata
+
+# Criar diretórios necessários
+RUN mkdir -p /app /var/log/ppg-hub /tmp/ppg-hub && \
+    chown -R ppghub:ppghub /app /var/log/ppg-hub /tmp/ppg-hub
+
+# Definir diretório de trabalho
+WORKDIR /app
+
+# Copiar JAR do estágio de build
+COPY --from=builder --chown=ppghub:ppghub /build/target/app.jar app.jar
+
+# Mudar para usuário não-root
+USER ppghub
+
+# Expor porta da aplicação
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/api/management/health || exit 1
+
+# JVM Options e entrypoint
+ENTRYPOINT ["java", \
+    # JVM Tuning
+    "-XX:+UseG1GC", \
+    "-XX:MaxGCPauseMillis=200", \
+    "-XX:+UseStringDeduplication", \
+    "-XX:+OptimizeStringConcat", \
+    # Memory
+    "-Xms512m", \
+    "-Xmx2g", \
+    "-XX:MetaspaceSize=256m", \
+    "-XX:MaxMetaspaceSize=512m", \
+    # GC Logging
+    "-Xlog:gc*:file=/var/log/ppg-hub/gc.log:time,uptime:filecount=10,filesize=100M", \
+    # Segurança
+    "-Djava.security.egd=file:/dev/./urandom", \
+    # Timezone
+    "-Duser.timezone=America/Sao_Paulo", \
+    # Temp directory
+    "-Djava.io.tmpdir=/tmp/ppg-hub", \
+    # Application
+    "-jar", "app.jar"]
+
+# Metadata
+LABEL org.opencontainers.image.source="https://github.com/ppghub/ppg-hub"
+LABEL org.opencontainers.image.description="PPG Hub Production Image"
+LABEL org.opencontainers.image.licenses="MIT"

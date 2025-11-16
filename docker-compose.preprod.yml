@@ -1,0 +1,131 @@
+# =============================================================================
+# Docker Compose - Ambiente de Pré-Produção
+# =============================================================================
+# Uso: docker-compose -f docker-compose.preprod.yml up -d
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database - Pré-Produção
+  postgres:
+    image: postgres:16-alpine
+    container_name: ppg_hub_postgres_preprod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-ppg_hub_preprod}
+      POSTGRES_USER: ${DB_USER:-ppghub_preprod}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      # Configurações de performance
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=pt_BR.UTF-8"
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_preprod_data:/var/lib/postgresql/data
+      # Configurações customizadas do PostgreSQL
+      - ./config/postgres/preprod/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ppghub_preprod}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    networks:
+      - ppg_hub_preprod_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis Cache - Pré-Produção
+  redis:
+    image: redis:7-alpine
+    container_name: ppg_hub_redis_preprod
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_preprod_data:/data
+      - ./config/redis/preprod/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf --requirepass ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - ppg_hub_preprod_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Aplicação Spring Boot - Pré-Produção
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        JAR_FILE: target/ppg-hub-*.jar
+    image: ppg-hub:preprod
+    container_name: ppg_hub_app_preprod
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: preprod
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-ppg_hub_preprod}
+      DB_USER: ${DB_USER:-ppghub_preprod}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      OPENALEX_EMAIL: ${OPENALEX_EMAIL}
+      JAVA_OPTS: >-
+        -Xms512m
+        -Xmx1024m
+        -XX:+UseG1GC
+        -XX:MaxGCPauseMillis=200
+        -XX:+HeapDumpOnOutOfMemoryError
+        -XX:HeapDumpPath=/var/log/ppg-hub/heapdump.hprof
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    volumes:
+      - app_preprod_logs:/var/log/ppg-hub
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/management/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - ppg_hub_preprod_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+networks:
+  ppg_hub_preprod_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  postgres_preprod_data:
+    driver: local
+  redis_preprod_data:
+    driver: local
+  app_preprod_logs:
+    driver: local

@@ -1,0 +1,210 @@
+# =============================================================================
+# Docker Compose - Ambiente de Produção
+# =============================================================================
+# ⚠️  ATENÇÃO: Use este arquivo apenas para produção
+# ⚠️  Todas as senhas devem vir de secrets ou variáveis de ambiente seguras
+# ⚠️  Considere usar Docker Swarm ou Kubernetes para produção real
+# =============================================================================
+# Uso: docker-compose -f docker-compose.prod.yml up -d
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database - Produção
+  postgres:
+    image: postgres:16-alpine
+    container_name: ppg_hub_postgres_prod
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      # Configurações de performance para produção
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=pt_BR.UTF-8"
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432" # Bind apenas localhost
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+      - ./config/postgres/prod/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./backups/postgres:/backups
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - ppg_hub_prod_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "10"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  # Redis Cache - Produção
+  redis:
+    image: redis:7-alpine
+    container_name: ppg_hub_redis_prod
+    restart: always
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379" # Bind apenas localhost
+    volumes:
+      - redis_prod_data:/data
+      - ./config/redis/prod/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf --requirepass ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - ppg_hub_prod_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "10"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Aplicação Spring Boot - Produção
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+      args:
+        JAR_FILE: target/ppg-hub-*.jar
+    image: ppg-hub:latest
+    container_name: ppg_hub_app_prod
+    restart: always
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      OPENALEX_EMAIL: ${OPENALEX_EMAIL}
+      CLOUD_REGION: ${CLOUD_REGION:-sa-east-1}
+      # JVM Tuning para produção
+      JAVA_OPTS: >-
+        -Xms2g
+        -Xmx4g
+        -XX:+UseG1GC
+        -XX:MaxGCPauseMillis=200
+        -XX:ParallelGCThreads=4
+        -XX:ConcGCThreads=2
+        -XX:InitiatingHeapOccupancyPercent=45
+        -XX:+HeapDumpOnOutOfMemoryError
+        -XX:HeapDumpPath=/var/log/ppg-hub/heapdump.hprof
+        -XX:+ExitOnOutOfMemoryError
+        -XX:+AlwaysPreTouch
+        -Djava.security.egd=file:/dev/./urandom
+        -Duser.timezone=America/Sao_Paulo
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    volumes:
+      - app_prod_logs:/var/log/ppg-hub
+      - app_prod_tmp:/tmp
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/management/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+      - ppg_hub_prod_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "20"
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 6G
+        reservations:
+          cpus: '2'
+          memory: 3G
+      # Configurações de update/rollback
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        monitor: 60s
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+
+  # Nginx - Reverse Proxy (opcional mas recomendado)
+  nginx:
+    image: nginx:alpine
+    container_name: ppg_hub_nginx_prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/nginx/prod/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./config/nginx/prod/conf.d:/etc/nginx/conf.d:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - app
+    networks:
+      - ppg_hub_prod_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "10"
+
+networks:
+  ppg_hub_prod_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
+
+volumes:
+  postgres_prod_data:
+    driver: local
+  redis_prod_data:
+    driver: local
+  app_prod_logs:
+    driver: local
+  app_prod_tmp:
+    driver: local
+  nginx_logs:
+    driver: local

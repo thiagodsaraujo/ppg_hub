@@ -1,0 +1,184 @@
+# =============================================================================
+# CONFIGURAÇÃO PARA AMBIENTE DE PRÉ-PRODUÇÃO / HOMOLOGAÇÃO
+# =============================================================================
+# Profile ativo: preprod
+# Uso: java -jar app.jar --spring.profiles.active=preprod
+# =============================================================================
+
+spring:
+  # Datasource - PostgreSQL pré-produção
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:preprod-db.ppghub.internal}:${DB_PORT:5432}/${DB_NAME:ppg_hub_preprod}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 15
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+
+  # JPA/Hibernate - Pré-produção
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+        # Configurações de performance
+        query:
+          in_clause_parameter_padding: true
+        jdbc:
+          time_zone: America/Sao_Paulo
+
+  # Flyway - Migrations (somente aplicar, não limpar)
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    clean-disabled: true # NÃO permitir clean em preprod
+    validate-on-migrate: true
+    out-of-order: false
+
+  # Redis - Cache pré-produção
+  data:
+    redis:
+      host: ${REDIS_HOST:preprod-redis.ppghub.internal}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+      timeout: 60000ms
+      lettuce:
+        pool:
+          max-active: 10
+          max-idle: 8
+          min-idle: 2
+
+  # Cache
+  cache:
+    type: redis
+    redis:
+      time-to-live: 1800000 # 30 minutos
+      cache-null-values: false
+
+  # Jackson
+  jackson:
+    serialization:
+      indent-output: false # Compacto em preprod
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+
+# Server
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+  error:
+    include-message: always
+    include-stacktrace: on_param # Somente se solicitado
+    include-binding-errors: never
+
+  # Timeouts e limites
+  tomcat:
+    connection-timeout: 20000
+    max-connections: 200
+    threads:
+      max: 50
+      min-spare: 10
+
+# OpenAlex API
+openalex:
+  api:
+    base-url: https://api.openalex.org
+    email: ${OPENALEX_EMAIL}
+    timeout: 30000
+    max-retries: 3
+    rate-limit:
+      max-requests-per-day: 100000
+      requests-per-second: 10
+
+# Actuator - Restrito
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /management
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+      environment: preprod
+
+# OpenAPI/Swagger - Habilitado mas com autenticação
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true # Ainda habilitado em preprod para testes
+    operations-sorter: method
+    tags-sorter: alpha
+    try-it-out-enabled: true
+  show-actuator: false
+
+# Logging - Balanceado
+logging:
+  level:
+    root: INFO
+    com.ppghub: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+    org.hibernate.SQL: WARN
+    org.flywaydb: INFO
+    org.springframework.cache: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: /var/log/ppg-hub/application.log
+    max-size: 50MB
+    max-history: 30
+    total-size-cap: 1GB
+
+# Configurações específicas da aplicação
+app:
+  environment: pre-production
+  features:
+    swagger-enabled: true
+    cors-enabled: true
+    actuator-unrestricted: false
+  cors:
+    allowed-origins:
+      - https://preprod.ppghub.com.br
+      - https://preprod-admin.ppghub.com.br
+    allowed-methods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - PATCH
+    allowed-headers:
+      - Content-Type
+      - Authorization
+      - X-Requested-With
+    allow-credentials: true
+    max-age: 3600
+
+# Configurações de segurança
+security:
+  require-ssl: true
+  content-security-policy: "default-src 'self'"
