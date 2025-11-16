@@ -1,0 +1,278 @@
+# =============================================================================
+# CONFIGURAÇÃO PARA DEPLOY NA AWS
+# =============================================================================
+# Profile: aws
+# Uso: java -jar app.jar --spring.profiles.active=aws
+#
+# Serviços AWS Utilizados:
+# - Amazon RDS (PostgreSQL)
+# - Amazon ElastiCache (Redis)
+# - Application Load Balancer (ALB)
+# - Amazon CloudWatch (Logs e Métricas)
+# - AWS Secrets Manager (Senhas)
+# - Amazon S3 (Backups e arquivos estáticos)
+# =============================================================================
+
+spring:
+  # Datasource - Amazon RDS PostgreSQL
+  datasource:
+    url: jdbc:postgresql://${AWS_RDS_ENDPOINT}:${AWS_RDS_PORT:5432}/${AWS_RDS_DATABASE}
+    username: ${AWS_RDS_USERNAME}
+    password: ${AWS_RDS_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+      pool-name: PPGHub-RDS-Pool
+      # Configurações específicas para RDS
+      connection-test-query: SELECT 1
+      validation-timeout: 5000
+
+  # JPA/Hibernate - AWS RDS
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        jdbc:
+          batch_size: 30
+          fetch_size: 50
+        order_inserts: true
+        order_updates: true
+        query:
+          in_clause_parameter_padding: true
+        jdbc:
+          time_zone: UTC
+        # Cache L2 com Redis
+        cache:
+          use_second_level_cache: true
+          use_query_cache: true
+          region:
+            factory_class: org.hibernate.cache.jcache.JCacheRegionFactory
+    open-in-view: false
+
+  # Flyway - Migrations
+  flyway:
+    enabled: true
+    baseline-on-migrate: false
+    clean-disabled: true
+    validate-on-migrate: true
+    out-of-order: false
+    # Usar AWS RDS endpoint
+    url: jdbc:postgresql://${AWS_RDS_ENDPOINT}:${AWS_RDS_PORT:5432}/${AWS_RDS_DATABASE}
+    user: ${AWS_RDS_USERNAME}
+    password: ${AWS_RDS_PASSWORD}
+
+  # Amazon ElastiCache (Redis)
+  data:
+    redis:
+      host: ${AWS_ELASTICACHE_ENDPOINT}
+      port: ${AWS_ELASTICACHE_PORT:6379}
+      password: ${AWS_ELASTICACHE_AUTH_TOKEN}
+      timeout: 60000ms
+      ssl:
+        enabled: true # ElastiCache em produção deve usar SSL
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 5
+          max-wait: 2000ms
+        cluster:
+          refresh:
+            adaptive: true
+            period: 60s
+
+  # Cache
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000 # 1 hora
+      cache-null-values: false
+      key-prefix: "ppghub:aws:cache:"
+      use-key-prefix: true
+
+  # Jackson
+  jackson:
+    serialization:
+      indent-output: false
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: non_null
+
+# Server
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+  tomcat:
+    connection-timeout: 20000
+    max-connections: 500
+    threads:
+      max: 200
+      min-spare: 25
+    # Configurações para ALB health checks
+    accesslog:
+      enabled: true
+      directory: /var/log/ppg-hub
+      prefix: access_log
+      suffix: .log
+      pattern: '%h %l %u %t "%r" %s %b %D'
+
+# OpenAlex API
+openalex:
+  api:
+    base-url: https://api.openalex.org
+    email: ${OPENALEX_EMAIL}
+    timeout: 30000
+    max-retries: 3
+    rate-limit:
+      max-requests-per-day: 100000
+      requests-per-second: 10
+
+# Actuator - Para ALB Health Checks e CloudWatch
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /management
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true # Para Kubernetes/ECS health checks
+  metrics:
+    export:
+      # CloudWatch Metrics
+      cloudwatch:
+        enabled: true
+        namespace: PPGHub
+        batch-size: 20
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+      environment: aws
+      region: ${AWS_REGION:sa-east-1}
+      instance: ${EC2_INSTANCE_ID:unknown}
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+# OpenAPI/Swagger - DESABILITADO em AWS (produção)
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+# Logging - CloudWatch Logs
+logging:
+  level:
+    root: WARN
+    com.ppghub: INFO
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+  pattern:
+    # JSON format para CloudWatch
+    console: '{"timestamp":"%d{yyyy-MM-dd HH:mm:ss.SSS}","level":"%level","thread":"%thread","logger":"%logger{40}","message":"%message","exception":"%ex{full}","aws_region":"${AWS_REGION:sa-east-1}","instance_id":"${EC2_INSTANCE_ID:unknown}"}'
+  file:
+    name: /var/log/ppg-hub/application.log
+    max-size: 100MB
+    max-history: 90
+    total-size-cap: 10GB
+  # CloudWatch Logs configuration
+  logback:
+    rollingpolicy:
+      max-file-size: 100MB
+      max-history: 90
+
+# Configurações específicas da aplicação
+app:
+  environment: aws
+  features:
+    swagger-enabled: false
+    cors-enabled: true
+    actuator-unrestricted: false
+  cors:
+    allowed-origins:
+      - https://${APP_DOMAIN:ppghub.com.br}
+      - https://www.${APP_DOMAIN:ppghub.com.br}
+      - https://admin.${APP_DOMAIN:ppghub.com.br}
+    allowed-methods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - PATCH
+    allowed-headers:
+      - Content-Type
+      - Authorization
+      - X-Requested-With
+    allow-credentials: true
+    max-age: 3600
+
+# Configurações de segurança
+security:
+  require-ssl: true
+  content-security-policy: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+
+# AWS Específico
+aws:
+  region: ${AWS_REGION:sa-east-1}
+  # S3 para arquivos e backups
+  s3:
+    bucket-name: ${AWS_S3_BUCKET:ppghub-prod}
+    backup-bucket: ${AWS_S3_BACKUP_BUCKET:ppghub-backups}
+  # Secrets Manager
+  secrets:
+    enabled: true
+  # CloudWatch
+  cloudwatch:
+    enabled: true
+    namespace: PPGHub
+  # Application Load Balancer
+  alb:
+    health-check-path: /api/management/health
+    deregistration-delay: 30
+
+# Resilience4j - Circuit Breaker para OpenAlex
+resilience4j:
+  circuitbreaker:
+    instances:
+      openalex:
+        slidingWindowSize: 100
+        minimumNumberOfCalls: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 60000
+        permittedNumberOfCallsInHalfOpenState: 5
+  ratelimiter:
+    instances:
+      openalex:
+        limitForPeriod: 10
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0
+  retry:
+    instances:
+      openalex:
+        maxAttempts: 3
+        waitDuration: 1000
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2

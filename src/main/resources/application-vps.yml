@@ -1,0 +1,237 @@
+# =============================================================================
+# CONFIGURAÇÃO PARA DEPLOY EM VPS (Self-Hosted)
+# =============================================================================
+# Profile: vps
+# Uso: java -jar app.jar --spring.profiles.active=vps
+#
+# Infraestrutura VPS:
+# - PostgreSQL 16 (containerizado ou instalado)
+# - Redis 7 (containerizado ou instalado)
+# - Nginx como reverse proxy
+# - Let's Encrypt para SSL
+# - Backup local com cron
+# =============================================================================
+
+spring:
+  # Datasource - PostgreSQL na VPS
+  datasource:
+    url: jdbc:postgresql://${VPS_DB_HOST:localhost}:${VPS_DB_PORT:5432}/${VPS_DB_NAME:ppg_hub}
+    username: ${VPS_DB_USER:ppghub}
+    password: ${VPS_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 15
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+      pool-name: PPGHub-VPS-Pool
+      connection-test-query: SELECT 1
+      validation-timeout: 5000
+
+  # JPA/Hibernate - VPS
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        jdbc:
+          batch_size: 30
+          fetch_size: 50
+        order_inserts: true
+        order_updates: true
+        query:
+          in_clause_parameter_padding: true
+        jdbc:
+          time_zone: America/Sao_Paulo
+        # Cache L2
+        cache:
+          use_second_level_cache: true
+          use_query_cache: true
+          region:
+            factory_class: org.hibernate.cache.jcache.JCacheRegionFactory
+    open-in-view: false
+
+  # Flyway - Migrations
+  flyway:
+    enabled: true
+    baseline-on-migrate: false
+    clean-disabled: true
+    validate-on-migrate: true
+    out-of-order: false
+    url: jdbc:postgresql://${VPS_DB_HOST:localhost}:${VPS_DB_PORT:5432}/${VPS_DB_NAME:ppg_hub}
+    user: ${VPS_DB_USER:ppghub}
+    password: ${VPS_DB_PASSWORD}
+
+  # Redis na VPS
+  data:
+    redis:
+      host: ${VPS_REDIS_HOST:localhost}
+      port: ${VPS_REDIS_PORT:6379}
+      password: ${VPS_REDIS_PASSWORD}
+      timeout: 60000ms
+      lettuce:
+        pool:
+          max-active: 15
+          max-idle: 8
+          min-idle: 4
+          max-wait: 2000ms
+
+  # Cache
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000 # 1 hora
+      cache-null-values: false
+      key-prefix: "ppghub:vps:cache:"
+      use-key-prefix: true
+
+  # Jackson
+  jackson:
+    serialization:
+      indent-output: false
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: non_null
+
+# Server
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+  tomcat:
+    connection-timeout: 20000
+    max-connections: 300
+    threads:
+      max: 150
+      min-spare: 20
+    accesslog:
+      enabled: true
+      directory: /var/log/ppg-hub
+      prefix: access_log
+      suffix: .log
+      pattern: '%h %l %u %t "%r" %s %b %D'
+
+# OpenAlex API
+openalex:
+  api:
+    base-url: https://api.openalex.org
+    email: ${OPENALEX_EMAIL}
+    timeout: 30000
+    max-retries: 3
+    rate-limit:
+      max-requests-per-day: 100000
+      requests-per-second: 10
+
+# Actuator - Para health checks
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /management
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+      environment: vps
+      server: ${VPS_SERVER_NAME:vps-01}
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+# OpenAPI/Swagger - DESABILITADO em VPS (produção)
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+# Logging - VPS
+logging:
+  level:
+    root: WARN
+    com.ppghub: INFO
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: /var/log/ppg-hub/application.log
+    max-size: 100MB
+    max-history: 90
+    total-size-cap: 10GB
+
+# Configurações específicas da aplicação
+app:
+  environment: vps
+  features:
+    swagger-enabled: false
+    cors-enabled: true
+    actuator-unrestricted: false
+  cors:
+    allowed-origins:
+      - https://${VPS_DOMAIN:ppghub.com.br}
+      - https://www.${VPS_DOMAIN:ppghub.com.br}
+    allowed-methods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - PATCH
+    allowed-headers:
+      - Content-Type
+      - Authorization
+      - X-Requested-With
+    allow-credentials: true
+    max-age: 3600
+
+# Configurações de segurança
+security:
+  require-ssl: true
+  content-security-policy: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+
+# VPS Específico
+vps:
+  server-name: ${VPS_SERVER_NAME:vps-01}
+  backup:
+    enabled: true
+    path: /backup/ppg-hub
+    schedule: "0 2 * * *" # Diariamente às 2h
+    retention-days: 30
+
+# Resilience4j
+resilience4j:
+  circuitbreaker:
+    instances:
+      openalex:
+        slidingWindowSize: 100
+        minimumNumberOfCalls: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 60000
+  ratelimiter:
+    instances:
+      openalex:
+        limitForPeriod: 10
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0
