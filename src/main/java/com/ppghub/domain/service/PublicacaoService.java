@@ -112,6 +112,24 @@ public class PublicacaoService {
 
         return repository.findById(id)
                 .map(entity -> {
+                    // Validar OpenAlex Work ID único (excluindo a própria publicação)
+                    if (request.getOpenalexWorkId() != null) {
+                        repository.findByOpenalexWorkId(request.getOpenalexWorkId()).ifPresent(existing -> {
+                            if (!existing.getId().equals(id)) {
+                                throw new IllegalArgumentException("Já existe uma publicação com este OpenAlex Work ID");
+                            }
+                        });
+                    }
+
+                    // Validar DOI único (excluindo a própria publicação)
+                    if (request.getDoi() != null) {
+                        repository.findByDoi(request.getDoi()).ifPresent(existing -> {
+                            if (!existing.getId().equals(id)) {
+                                throw new IllegalArgumentException("Já existe uma publicação com este DOI");
+                            }
+                        });
+                    }
+
                     mapper.updateEntityFromRequest(request, entity);
                     PublicacaoEntity updated = repository.save(entity);
                     log.info("Publicação atualizada com sucesso: ID {}", updated.getId());

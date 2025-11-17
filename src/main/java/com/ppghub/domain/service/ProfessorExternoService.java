@@ -5,8 +5,10 @@ import com.ppghub.application.dto.request.ProfessorExternoUpdateRequest;
 import com.ppghub.application.dto.response.ProfessorExternoResponse;
 import com.ppghub.application.mapper.ProfessorExternoMapper;
 import com.ppghub.config.CacheConfig;
+import com.ppghub.domain.exception.BusinessRuleException;
 import com.ppghub.domain.exception.DuplicateEntityException;
 import com.ppghub.infrastructure.persistence.entity.ProfessorExternoEntity;
+import com.ppghub.infrastructure.persistence.repository.JpaMembroBancaRepository;
 import com.ppghub.infrastructure.persistence.repository.JpaProfessorExternoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +34,7 @@ import java.util.Optional;
 public class ProfessorExternoService {
 
     private final JpaProfessorExternoRepository repository;
+    private final JpaMembroBancaRepository membroBancaRepository;
     private final ProfessorExternoMapper mapper;
 
     public List<ProfessorExternoResponse> findAll() {
@@ -152,6 +155,20 @@ public class ProfessorExternoService {
                         });
                     }
 
+                    // Validar Lattes único (se alterado)
+                    if (request.getLattesId() != null && !request.getLattesId().equals(entity.getLattesId())) {
+                        repository.findByLattesId(request.getLattesId()).ifPresent(existing -> {
+                            throw new DuplicateEntityException("Professor Externo", "Lattes ID", request.getLattesId());
+                        });
+                    }
+
+                    // Validar OpenAlex Author ID único (se alterado)
+                    if (request.getOpenalexAuthorId() != null && !request.getOpenalexAuthorId().equals(entity.getOpenalexAuthorId())) {
+                        repository.findByOpenalexAuthorId(request.getOpenalexAuthorId()).ifPresent(existing -> {
+                            throw new DuplicateEntityException("Professor Externo", "OpenAlex Author ID", request.getOpenalexAuthorId());
+                        });
+                    }
+
                     mapper.updateEntityFromRequest(request, entity);
 
                     ProfessorExternoEntity updated = repository.save(entity);
@@ -185,6 +202,15 @@ public class ProfessorExternoService {
 
         if (!repository.existsById(id)) {
             return false;
+        }
+
+        // Verificar se o professor externo possui participações em bancas
+        long bancasCount = membroBancaRepository.countByProfessorExternoId(id);
+        if (bancasCount > 0) {
+            throw new BusinessRuleException(
+                String.format("Não é possível deletar o professor externo. Existem %d participação(ões) em banca(s). " +
+                    "Considere inativar o professor externo ao invés de deletá-lo.", bancasCount)
+            );
         }
 
         repository.deleteById(id);

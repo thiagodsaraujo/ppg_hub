@@ -198,7 +198,8 @@ public class MembroBancaService {
         }
 
         // Validar que a banca não foi realizada
-        if (membro.get().getBanca().isRealizada()) {
+        BancaEntity banca = membro.get().getBanca();
+        if (banca != null && banca.isRealizada()) {
             throw new BusinessRuleException("Não é possível remover membros de uma banca já realizada");
         }
 
@@ -220,7 +221,8 @@ public class MembroBancaService {
         }
 
         // Validar que o membro pertence à banca informada
-        if (!membro.get().getBanca().getId().equals(bancaId)) {
+        BancaEntity bancaMembro = membro.get().getBanca();
+        if (bancaMembro == null || !bancaMembro.getId().equals(bancaId)) {
             throw new BusinessRuleException("Membro não pertence a esta banca");
         }
 

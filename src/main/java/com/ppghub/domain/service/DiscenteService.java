@@ -5,11 +5,13 @@ import com.ppghub.application.dto.request.DiscenteUpdateRequest;
 import com.ppghub.application.dto.response.DiscenteResponse;
 import com.ppghub.application.mapper.DiscenteMapper;
 import com.ppghub.config.CacheConfig;
+import com.ppghub.domain.exception.BusinessRuleException;
 import com.ppghub.domain.exception.DuplicateEntityException;
 import com.ppghub.domain.exception.EntityNotFoundException;
 import com.ppghub.infrastructure.persistence.entity.DiscenteEntity;
 import com.ppghub.infrastructure.persistence.entity.DocenteEntity;
 import com.ppghub.infrastructure.persistence.entity.ProgramaEntity;
+import com.ppghub.infrastructure.persistence.repository.JpaBancaRepository;
 import com.ppghub.infrastructure.persistence.repository.JpaDiscenteRepository;
 import com.ppghub.infrastructure.persistence.repository.JpaDocenteRepository;
 import com.ppghub.infrastructure.persistence.repository.JpaProgramaRepository;
@@ -37,6 +39,7 @@ public class DiscenteService {
     private final JpaDiscenteRepository repository;
     private final JpaProgramaRepository programaRepository;
     private final JpaDocenteRepository docenteRepository;
+    private final JpaBancaRepository bancaRepository;
     private final DiscenteMapper mapper;
 
     public List<DiscenteResponse> findAll() {
@@ -188,6 +191,15 @@ public class DiscenteService {
 
         if (!repository.existsById(id)) {
             return false;
+        }
+
+        // Verificar se o discente possui bancas associadas
+        long bancasCount = bancaRepository.countByDiscenteId(id);
+        if (bancasCount > 0) {
+            throw new BusinessRuleException(
+                String.format("Não é possível deletar o discente. Existem %d banca(s) associada(s). " +
+                    "Considere inativar o discente ao invés de deletá-lo.", bancasCount)
+            );
         }
 
         repository.deleteById(id);

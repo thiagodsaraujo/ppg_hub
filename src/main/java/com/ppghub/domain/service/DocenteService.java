@@ -3,10 +3,13 @@ package com.ppghub.domain.service;
 import com.ppghub.application.dto.request.DocenteCreateRequest;
 import com.ppghub.application.dto.response.DocenteResponse;
 import com.ppghub.application.mapper.DocenteMapper;
+import com.ppghub.domain.exception.BusinessRuleException;
 import com.ppghub.infrastructure.persistence.entity.DocenteEntity;
 import com.ppghub.infrastructure.persistence.entity.InstituicaoEntity;
+import com.ppghub.infrastructure.persistence.repository.JpaDiscenteRepository;
 import com.ppghub.infrastructure.persistence.repository.JpaDocenteRepository;
 import com.ppghub.infrastructure.persistence.repository.JpaInstituicaoRepository;
+import com.ppghub.infrastructure.persistence.repository.JpaMembroBancaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -32,6 +35,8 @@ public class DocenteService {
 
     private final JpaDocenteRepository repository;
     private final JpaInstituicaoRepository instituicaoRepository;
+    private final JpaDiscenteRepository discenteRepository;
+    private final JpaMembroBancaRepository membroBancaRepository;
     private final DocenteMapper mapper;
 
     public List<DocenteResponse> findAll() {
@@ -131,6 +136,33 @@ public class DocenteService {
 
         return repository.findById(id)
                 .map(entity -> {
+                    // Validar CPF único (excluindo o próprio docente)
+                    if (request.getCpf() != null) {
+                        repository.findByCpf(request.getCpf()).ifPresent(existing -> {
+                            if (!existing.getId().equals(id)) {
+                                throw new IllegalArgumentException("Já existe um docente com este CPF");
+                            }
+                        });
+                    }
+
+                    // Validar Lattes único (excluindo o próprio docente)
+                    if (request.getLattesId() != null) {
+                        repository.findByLattesId(request.getLattesId()).ifPresent(existing -> {
+                            if (!existing.getId().equals(id)) {
+                                throw new IllegalArgumentException("Já existe um docente com este Lattes ID");
+                            }
+                        });
+                    }
+
+                    // Validar ORCID único (excluindo o próprio docente)
+                    if (request.getOrcid() != null) {
+                        repository.findByOrcid(request.getOrcid()).ifPresent(existing -> {
+                            if (!existing.getId().equals(id)) {
+                                throw new IllegalArgumentException("Já existe um docente com este ORCID");
+                            }
+                        });
+                    }
+
                     mapper.updateEntityFromRequest(request, entity);
                     DocenteEntity updated = repository.save(entity);
                     log.info("Docente atualizado com sucesso: ID {}", updated.getId());
@@ -145,6 +177,24 @@ public class DocenteService {
 
         if (!repository.existsById(id)) {
             return false;
+        }
+
+        // Verificar se o docente possui orientandos
+        long orientandosCount = discenteRepository.countByOrientadorId(id);
+        if (orientandosCount > 0) {
+            throw new BusinessRuleException(
+                String.format("Não é possível deletar o docente. Existem %d orientando(s) associado(s). " +
+                    "Considere desativar o docente ao invés de deletá-lo.", orientandosCount)
+            );
+        }
+
+        // Verificar se o docente possui participações em bancas
+        long bancasCount = membroBancaRepository.countByDocenteId(id);
+        if (bancasCount > 0) {
+            throw new BusinessRuleException(
+                String.format("Não é possível deletar o docente. Existem %d participação(ões) em banca(s). " +
+                    "Considere desativar o docente ao invés de deletá-lo.", bancasCount)
+            );
         }
 
         repository.deleteById(id);

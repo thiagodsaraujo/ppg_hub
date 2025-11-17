@@ -3,8 +3,11 @@ package com.ppghub.domain.service;
 import com.ppghub.application.dto.request.ProgramaCreateRequest;
 import com.ppghub.application.dto.response.ProgramaResponse;
 import com.ppghub.application.mapper.ProgramaMapper;
+import com.ppghub.domain.exception.BusinessRuleException;
 import com.ppghub.infrastructure.persistence.entity.InstituicaoEntity;
 import com.ppghub.infrastructure.persistence.entity.ProgramaEntity;
+import com.ppghub.infrastructure.persistence.repository.JpaBancaRepository;
+import com.ppghub.infrastructure.persistence.repository.JpaDiscenteRepository;
 import com.ppghub.infrastructure.persistence.repository.JpaInstituicaoRepository;
 import com.ppghub.infrastructure.persistence.repository.JpaProgramaRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +34,8 @@ public class ProgramaService {
 
     private final JpaProgramaRepository repository;
     private final JpaInstituicaoRepository instituicaoRepository;
+    private final JpaDiscenteRepository discenteRepository;
+    private final JpaBancaRepository bancaRepository;
     private final ProgramaMapper mapper;
 
     public List<ProgramaResponse> findAll() {
@@ -101,6 +106,15 @@ public class ProgramaService {
 
         return repository.findById(id)
                 .map(entity -> {
+                    // Validar código CAPES único (excluindo o próprio programa)
+                    if (request.getCodigoCapes() != null) {
+                        repository.findByCodigoCapes(request.getCodigoCapes()).ifPresent(existing -> {
+                            if (!existing.getId().equals(id)) {
+                                throw new IllegalArgumentException("Já existe um programa com este código CAPES");
+                            }
+                        });
+                    }
+
                     mapper.updateEntityFromRequest(request, entity);
                     ProgramaEntity updated = repository.save(entity);
                     log.info("Programa atualizado com sucesso: ID {}", updated.getId());
@@ -115,6 +129,24 @@ public class ProgramaService {
 
         if (!repository.existsById(id)) {
             return false;
+        }
+
+        // Verificar se o programa possui discentes
+        long discentesCount = discenteRepository.countByProgramaId(id);
+        if (discentesCount > 0) {
+            throw new BusinessRuleException(
+                String.format("Não é possível deletar o programa. Existem %d discente(s) associado(s). " +
+                    "Considere inativar o programa ao invés de deletá-lo.", discentesCount)
+            );
+        }
+
+        // Verificar se o programa possui bancas
+        long bancasCount = bancaRepository.countByProgramaId(id);
+        if (bancasCount > 0) {
+            throw new BusinessRuleException(
+                String.format("Não é possível deletar o programa. Existem %d banca(s) associada(s). " +
+                    "Considere inativar o programa ao invés de deletá-lo.", bancasCount)
+            );
         }
 
         repository.deleteById(id);

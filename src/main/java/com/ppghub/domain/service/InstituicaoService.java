@@ -3,8 +3,11 @@ package com.ppghub.domain.service;
 import com.ppghub.application.dto.request.InstituicaoCreateRequest;
 import com.ppghub.application.dto.response.InstituicaoResponse;
 import com.ppghub.application.mapper.InstituicaoMapper;
+import com.ppghub.domain.exception.BusinessRuleException;
 import com.ppghub.infrastructure.persistence.entity.InstituicaoEntity;
+import com.ppghub.infrastructure.persistence.repository.JpaDocenteRepository;
 import com.ppghub.infrastructure.persistence.repository.JpaInstituicaoRepository;
+import com.ppghub.infrastructure.persistence.repository.JpaProgramaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -30,6 +33,8 @@ import static com.ppghub.config.CacheConfig.INSTITUICOES_CACHE;
 public class InstituicaoService {
 
     private final JpaInstituicaoRepository repository;
+    private final JpaProgramaRepository programaRepository;
+    private final JpaDocenteRepository docenteRepository;
     private final InstituicaoMapper mapper;
 
     public List<InstituicaoResponse> findAll() {
@@ -100,6 +105,24 @@ public class InstituicaoService {
 
         return repository.findById(id)
                 .map(entity -> {
+                    // Validar CNPJ único (excluindo a própria instituição)
+                    if (request.getCnpj() != null) {
+                        repository.findByCnpj(request.getCnpj()).ifPresent(existing -> {
+                            if (!existing.getId().equals(id)) {
+                                throw new IllegalArgumentException("Já existe uma instituição com este CNPJ");
+                            }
+                        });
+                    }
+
+                    // Validar sigla única (excluindo a própria instituição)
+                    if (request.getSigla() != null) {
+                        repository.findBySigla(request.getSigla()).ifPresent(existing -> {
+                            if (!existing.getId().equals(id)) {
+                                throw new IllegalArgumentException("Já existe uma instituição com esta sigla");
+                            }
+                        });
+                    }
+
                     mapper.updateEntityFromRequest(request, entity);
                     InstituicaoEntity updated = repository.save(entity);
                     log.info("Instituição atualizada com sucesso: ID {}", updated.getId());
@@ -114,6 +137,24 @@ public class InstituicaoService {
 
         if (!repository.existsById(id)) {
             return false;
+        }
+
+        // Verificar se a instituição possui programas
+        long programasCount = programaRepository.countByInstituicaoId(id);
+        if (programasCount > 0) {
+            throw new BusinessRuleException(
+                String.format("Não é possível deletar a instituição. Existem %d programa(s) associado(s). " +
+                    "Considere desativar a instituição ao invés de deletá-la.", programasCount)
+            );
+        }
+
+        // Verificar se a instituição possui docentes
+        long docentesCount = docenteRepository.countByInstituicaoId(id);
+        if (docentesCount > 0) {
+            throw new BusinessRuleException(
+                String.format("Não é possível deletar a instituição. Existem %d docente(s) associado(s). " +
+                    "Considere desativar a instituição ao invés de deletá-la.", docentesCount)
+            );
         }
 
         repository.deleteById(id);
