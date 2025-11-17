@@ -1,5 +1,6 @@
 package com.ppghub.domain.service;
 
+import com.ppghub.application.dto.enums.ResultadoBancaDTO;
 import com.ppghub.application.dto.request.BancaCreateRequest;
 import com.ppghub.application.dto.request.BancaUpdateRequest;
 import com.ppghub.application.dto.response.BancaResponse;
@@ -106,7 +107,7 @@ public class BancaService {
         entity.setPrograma(programa);
 
         // ✅ Validar composição da banca se houver membros
-        if (!entity.getMembros().isEmpty()) {
+        if (entity.getMembros() != null && !entity.getMembros().isEmpty()) {
             validarComposicaoBanca(entity);
         }
 
@@ -136,7 +137,7 @@ public class BancaService {
                     mapper.updateEntityFromRequest(request, entity);
 
                     // ✅ Validar composição da banca se houver membros
-                    if (!entity.getMembros().isEmpty()) {
+                    if (entity.getMembros() != null && !entity.getMembros().isEmpty()) {
                         validarComposicaoBanca(entity);
                     }
 
@@ -151,8 +152,11 @@ public class BancaService {
      */
     @Transactional
     @CacheEvict(value = CacheConfig.BANCAS_CACHE, key = "#id")
-    public Optional<BancaResponse> marcarComoRealizada(Long id, BancaEntity.ResultadoBanca resultado) {
-        log.info("Marcando banca como realizada: ID {}, Resultado: {}", id, resultado);
+    public Optional<BancaResponse> marcarComoRealizada(Long id, ResultadoBancaDTO resultadoDTO) {
+        log.info("Marcando banca como realizada: ID {}, Resultado: {}", id, resultadoDTO);
+
+        // Converter DTO para entidade enum
+        BancaEntity.ResultadoBanca resultado = convertResultadoDTO(resultadoDTO);
 
         return repository.findById(id)
                 .map(entity -> {
@@ -162,7 +166,9 @@ public class BancaService {
                     }
 
                     // Validar composição antes de marcar como realizada
-                    validarComposicaoBanca(id);
+                    if (entity.getMembros() != null && !entity.getMembros().isEmpty()) {
+                        validarComposicaoBanca(entity);
+                    }
 
                     entity.marcarComoRealizada(resultado);
                     BancaEntity updated = repository.save(entity);
@@ -286,5 +292,18 @@ public class BancaService {
                 "Já existe uma banca agendada para este discente no horário informado (±2 horas)"
             );
         }
+    }
+
+    /**
+     * Converte ResultadoBancaDTO para BancaEntity.ResultadoBanca.
+     * Mantém a separação de camadas ao não expor a entidade de domínio na API.
+     */
+    private BancaEntity.ResultadoBanca convertResultadoDTO(ResultadoBancaDTO dto) {
+        return switch (dto) {
+            case APROVADO -> BancaEntity.ResultadoBanca.APROVADO;
+            case APROVADO_COM_RESTRICOES -> BancaEntity.ResultadoBanca.APROVADO_COM_RESTRICOES;
+            case APROVADO_COM_CORRECOES -> BancaEntity.ResultadoBanca.APROVADO_COM_CORRECOES;
+            case REPROVADO -> BancaEntity.ResultadoBanca.REPROVADO;
+        };
     }
 }

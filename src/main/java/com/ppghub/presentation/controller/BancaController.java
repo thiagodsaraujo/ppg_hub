@@ -1,11 +1,11 @@
 package com.ppghub.presentation.controller;
 
+import com.ppghub.application.dto.enums.ResultadoBancaDTO;
 import com.ppghub.application.dto.request.BancaCreateRequest;
 import com.ppghub.application.dto.request.BancaUpdateRequest;
 import com.ppghub.application.dto.response.BancaResponse;
 import com.ppghub.application.dto.response.PagedResponse;
 import com.ppghub.domain.service.BancaService;
-import com.ppghub.infrastructure.persistence.entity.BancaEntity;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -114,17 +114,19 @@ public class BancaController {
     @Operation(summary = "Marcar banca como realizada", description = "Registra que a banca foi realizada e define o resultado")
     public ResponseEntity<BancaResponse> marcarComoRealizada(
             @Parameter(description = "ID da banca") @PathVariable Long id,
-            @Parameter(description = "Resultado da banca") @RequestParam String resultado) {
+            @Parameter(description = "Resultado da banca (APROVADO, APROVADO_COM_RESTRICOES, APROVADO_COM_CORRECOES, REPROVADO)")
+            @RequestParam String resultado) {
         log.info("Marcando banca como realizada: ID {}, Resultado: {}", id, resultado);
 
-        BancaEntity.ResultadoBanca resultadoBanca;
+        ResultadoBancaDTO resultadoBancaDTO;
         try {
-            resultadoBanca = BancaEntity.ResultadoBanca.valueOf(resultado);
+            resultadoBancaDTO = ResultadoBancaDTO.valueOf(resultado);
         } catch (IllegalArgumentException e) {
+            log.warn("Resultado de banca inválido: {}", resultado);
             return ResponseEntity.badRequest().build();
         }
 
-        return bancaService.marcarComoRealizada(id, resultadoBanca)
+        return bancaService.marcarComoRealizada(id, resultadoBancaDTO)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
