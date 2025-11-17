@@ -4,6 +4,8 @@ import com.ppghub.application.dto.request.BancaCreateRequest;
 import com.ppghub.application.dto.request.BancaUpdateRequest;
 import com.ppghub.application.dto.response.BancaResponse;
 import com.ppghub.application.mapper.BancaMapper;
+import com.ppghub.domain.exception.BusinessRuleException;
+import com.ppghub.domain.exception.EntityNotFoundException;
 import com.ppghub.infrastructure.persistence.entity.*;
 import com.ppghub.infrastructure.persistence.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -82,11 +84,11 @@ public class BancaService {
 
         // Validar que o discente existe
         DiscenteEntity discente = discenteRepository.findById(request.getDiscenteId())
-                .orElseThrow(() -> new IllegalArgumentException("Discente não encontrado: " + request.getDiscenteId()));
+                .orElseThrow(() -> new EntityNotFoundException("Discente", request.getDiscenteId()));
 
         // Validar que o programa existe
         ProgramaEntity programa = programaRepository.findById(request.getProgramaId())
-                .orElseThrow(() -> new IllegalArgumentException("Programa não encontrado: " + request.getProgramaId()));
+                .orElseThrow(() -> new EntityNotFoundException("Programa", request.getProgramaId()));
 
         // Validar conflito de horário
         validarConflitoHorario(request.getDiscenteId(), request.getDataHora());
@@ -110,7 +112,7 @@ public class BancaService {
                 .map(entity -> {
                     // Validar se a banca pode ser atualizada
                     if (entity.isRealizada()) {
-                        throw new IllegalStateException("Não é possível atualizar uma banca já realizada");
+                        throw new BusinessRuleException("Não é possível atualizar uma banca já realizada");
                     }
 
                     // Se alterou data/hora, validar conflito
@@ -137,7 +139,7 @@ public class BancaService {
                 .map(entity -> {
                     // Validar que a banca ainda não foi realizada
                     if (entity.isRealizada()) {
-                        throw new IllegalStateException("Banca já foi realizada");
+                        throw new BusinessRuleException("Banca já foi realizada");
                     }
 
                     // Validar composição antes de marcar como realizada
@@ -160,7 +162,7 @@ public class BancaService {
         return repository.findById(id)
                 .map(entity -> {
                     if (!entity.podeCancelar()) {
-                        throw new IllegalStateException("Banca não pode ser cancelada no status atual: " + entity.getStatusBanca());
+                        throw new BusinessRuleException("Banca não pode ser cancelada no status atual: " + entity.getStatusBanca());
                     }
 
                     entity.setStatusBanca(BancaEntity.StatusBanca.CANCELADA);
@@ -185,7 +187,7 @@ public class BancaService {
         return repository.findById(id)
                 .map(entity -> {
                     if (!entity.podeReagendar()) {
-                        throw new IllegalStateException("Banca não pode ser reagendada no status atual: " + entity.getStatusBanca());
+                        throw new BusinessRuleException("Banca não pode ser reagendada no status atual: " + entity.getStatusBanca());
                     }
 
                     // Validar conflito de horário com a nova data
@@ -211,7 +213,7 @@ public class BancaService {
 
         // Não permitir deletar bancas realizadas
         if (banca.get().isRealizada()) {
-            throw new IllegalStateException("Não é possível deletar uma banca já realizada");
+            throw new BusinessRuleException("Não é possível deletar uma banca já realizada");
         }
 
         repository.deleteById(id);
@@ -236,14 +238,14 @@ public class BancaService {
                 .count();
 
         if (numTitulares < MIN_MEMBROS_TITULARES) {
-            throw new IllegalStateException(
+            throw new BusinessRuleException(
                 String.format("Banca deve ter no mínimo %d membros titulares. Atual: %d",
                     MIN_MEMBROS_TITULARES, numTitulares)
             );
         }
 
         if (numTitulares > MAX_MEMBROS_TITULARES) {
-            throw new IllegalStateException(
+            throw new BusinessRuleException(
                 String.format("Banca deve ter no máximo %d membros titulares. Atual: %d",
                     MAX_MEMBROS_TITULARES, numTitulares)
             );
@@ -255,7 +257,7 @@ public class BancaService {
                 .count();
 
         if (numExternos < MIN_MEMBROS_EXTERNOS) {
-            throw new IllegalStateException(
+            throw new BusinessRuleException(
                 String.format("Banca deve ter pelo menos %d membro externo. Atual: %d",
                     MIN_MEMBROS_EXTERNOS, numExternos)
             );
@@ -277,7 +279,7 @@ public class BancaService {
         );
 
         if (!conflitos.isEmpty()) {
-            throw new IllegalStateException(
+            throw new BusinessRuleException(
                 "Já existe uma banca agendada para este discente no horário informado (±2 horas)"
             );
         }

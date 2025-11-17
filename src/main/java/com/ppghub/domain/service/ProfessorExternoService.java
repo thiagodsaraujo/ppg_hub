@@ -4,6 +4,7 @@ import com.ppghub.application.dto.request.ProfessorExternoCreateRequest;
 import com.ppghub.application.dto.request.ProfessorExternoUpdateRequest;
 import com.ppghub.application.dto.response.ProfessorExternoResponse;
 import com.ppghub.application.mapper.ProfessorExternoMapper;
+import com.ppghub.domain.exception.DuplicateEntityException;
 import com.ppghub.infrastructure.persistence.entity.ProfessorExternoEntity;
 import com.ppghub.infrastructure.persistence.repository.JpaProfessorExternoRepository;
 import lombok.RequiredArgsConstructor;
@@ -105,17 +106,17 @@ public class ProfessorExternoService {
 
         // Validar email único
         if (repository.findByEmail(request.getEmail()).isPresent()) {
-            throw new IllegalArgumentException("Já existe um professor externo com este email: " + request.getEmail());
+            throw new DuplicateEntityException("Professor Externo", "email", request.getEmail());
         }
 
         // Validar ORCID único (se informado)
         if (request.getOrcid() != null && repository.findByOrcid(request.getOrcid()).isPresent()) {
-            throw new IllegalArgumentException("Já existe um professor externo com este ORCID");
+            throw new DuplicateEntityException("Professor Externo", "ORCID", request.getOrcid());
         }
 
         // Validar Lattes único (se informado)
         if (request.getLattesId() != null && repository.findByLattesId(request.getLattesId()).isPresent()) {
-            throw new IllegalArgumentException("Já existe um professor externo com este Lattes ID");
+            throw new DuplicateEntityException("Professor Externo", "Lattes ID", request.getLattesId());
         }
 
         ProfessorExternoEntity entity = mapper.toEntity(request);
@@ -134,14 +135,14 @@ public class ProfessorExternoService {
                     // Validar email único (se alterado)
                     if (request.getEmail() != null && !request.getEmail().equals(entity.getEmail())) {
                         repository.findByEmail(request.getEmail()).ifPresent(existing -> {
-                            throw new IllegalArgumentException("Já existe um professor externo com este email");
+                            throw new DuplicateEntityException("Professor Externo", "email", request.getEmail());
                         });
                     }
 
                     // Validar ORCID único (se alterado)
                     if (request.getOrcid() != null && !request.getOrcid().equals(entity.getOrcid())) {
                         repository.findByOrcid(request.getOrcid()).ifPresent(existing -> {
-                            throw new IllegalArgumentException("Já existe um professor externo com este ORCID");
+                            throw new DuplicateEntityException("Professor Externo", "ORCID", request.getOrcid());
                         });
                     }
 

@@ -3,6 +3,10 @@ package com.ppghub.domain.service;
 import com.ppghub.application.dto.request.MembroBancaCreateRequest;
 import com.ppghub.application.dto.response.MembroBancaResponse;
 import com.ppghub.application.mapper.MembroBancaMapper;
+import com.ppghub.domain.exception.BusinessRuleException;
+import com.ppghub.domain.exception.DuplicateEntityException;
+import com.ppghub.domain.exception.EntityNotFoundException;
+import com.ppghub.domain.exception.ValidationException;
 import com.ppghub.infrastructure.persistence.entity.*;
 import com.ppghub.infrastructure.persistence.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -71,11 +75,11 @@ public class MembroBancaService {
 
         // Validar que a banca existe
         BancaEntity banca = bancaRepository.findById(bancaId)
-                .orElseThrow(() -> new IllegalArgumentException("Banca não encontrada: " + bancaId));
+                .orElseThrow(() -> new EntityNotFoundException("Banca", bancaId));
 
         // Validar que a banca não foi realizada
         if (banca.isRealizada()) {
-            throw new IllegalStateException("Não é possível adicionar membros a uma banca já realizada");
+            throw new BusinessRuleException("Não é possível adicionar membros a uma banca já realizada");
         }
 
         // Validar que exatamente um entre docente ou professorExterno foi informado
@@ -83,11 +87,11 @@ public class MembroBancaService {
         boolean temProfessorExterno = request.getProfessorExternoId() != null;
 
         if (!temDocente && !temProfessorExterno) {
-            throw new IllegalArgumentException("Deve ser informado docenteId OU professorExternoId");
+            throw new ValidationException("Deve ser informado docenteId OU professorExternoId");
         }
 
         if (temDocente && temProfessorExterno) {
-            throw new IllegalArgumentException("Não pode informar docenteId E professorExternoId ao mesmo tempo");
+            throw new ValidationException("Não pode informar docenteId E professorExternoId ao mesmo tempo");
         }
 
         MembroBancaEntity entity = mapper.toEntity(request);
@@ -96,21 +100,21 @@ public class MembroBancaService {
         // Adicionar docente ou professor externo
         if (temDocente) {
             DocenteEntity docente = docenteRepository.findById(request.getDocenteId())
-                    .orElseThrow(() -> new IllegalArgumentException("Docente não encontrado: " + request.getDocenteId()));
+                    .orElseThrow(() -> new EntityNotFoundException("Docente", request.getDocenteId()));
 
             // Validar se docente já está na banca
             if (repository.existsByBancaAndDocente(bancaId, request.getDocenteId())) {
-                throw new IllegalArgumentException("Docente já está cadastrado nesta banca");
+                throw new DuplicateEntityException("Docente já está cadastrado nesta banca");
             }
 
             entity.setDocente(docente);
         } else {
             ProfessorExternoEntity professorExterno = professorExternoRepository.findById(request.getProfessorExternoId())
-                    .orElseThrow(() -> new IllegalArgumentException("Professor externo não encontrado: " + request.getProfessorExternoId()));
+                    .orElseThrow(() -> new EntityNotFoundException("Professor Externo", request.getProfessorExternoId()));
 
             // Validar se professor externo já está na banca
             if (repository.existsByBancaAndProfessorExterno(bancaId, request.getProfessorExternoId())) {
-                throw new IllegalArgumentException("Professor externo já está cadastrado nesta banca");
+                throw new DuplicateEntityException("Professor externo já está cadastrado nesta banca");
             }
 
             entity.setProfessorExterno(professorExterno);
@@ -132,7 +136,7 @@ public class MembroBancaService {
         return repository.findById(id)
                 .map(entity -> {
                     if (entity.isConfirmado()) {
-                        throw new IllegalStateException("Participação já foi confirmada");
+                        throw new BusinessRuleException("Participação já foi confirmada");
                     }
 
                     entity.confirmarParticipacao();
@@ -152,7 +156,7 @@ public class MembroBancaService {
         return repository.findById(id)
                 .map(entity -> {
                     if (entity.isRecusado()) {
-                        throw new IllegalStateException("Participação já foi recusada");
+                        throw new BusinessRuleException("Participação já foi recusada");
                     }
 
                     entity.recusarParticipacao(motivo);
@@ -172,7 +176,7 @@ public class MembroBancaService {
         return repository.findById(id)
                 .map(entity -> {
                     if (entity.getStatusConvite() != MembroBancaEntity.StatusConvite.PENDENTE) {
-                        throw new IllegalStateException("Convite já foi enviado");
+                        throw new BusinessRuleException("Convite já foi enviado");
                     }
 
                     entity.setStatusConvite(MembroBancaEntity.StatusConvite.ENVIADO);
@@ -195,7 +199,7 @@ public class MembroBancaService {
 
         // Validar que a banca não foi realizada
         if (membro.get().getBanca().isRealizada()) {
-            throw new IllegalStateException("Não é possível remover membros de uma banca já realizada");
+            throw new BusinessRuleException("Não é possível remover membros de uma banca já realizada");
         }
 
         repository.deleteById(id);
@@ -217,7 +221,7 @@ public class MembroBancaService {
 
         // Validar que o membro pertence à banca informada
         if (!membro.get().getBanca().getId().equals(bancaId)) {
-            throw new IllegalArgumentException("Membro não pertence a esta banca");
+            throw new BusinessRuleException("Membro não pertence a esta banca");
         }
 
         return delete(membroId);

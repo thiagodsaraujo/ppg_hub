@@ -4,6 +4,8 @@ import com.ppghub.application.dto.request.DiscenteCreateRequest;
 import com.ppghub.application.dto.request.DiscenteUpdateRequest;
 import com.ppghub.application.dto.response.DiscenteResponse;
 import com.ppghub.application.mapper.DiscenteMapper;
+import com.ppghub.domain.exception.DuplicateEntityException;
+import com.ppghub.domain.exception.EntityNotFoundException;
 import com.ppghub.infrastructure.persistence.entity.DiscenteEntity;
 import com.ppghub.infrastructure.persistence.entity.DocenteEntity;
 import com.ppghub.infrastructure.persistence.entity.ProgramaEntity;
@@ -95,31 +97,31 @@ public class DiscenteService {
 
         // Validar que o programa existe
         ProgramaEntity programa = programaRepository.findById(request.getProgramaId())
-                .orElseThrow(() -> new IllegalArgumentException("Programa não encontrado: " + request.getProgramaId()));
+                .orElseThrow(() -> new EntityNotFoundException("Programa", request.getProgramaId()));
 
         // Validar matrícula única
         if (repository.findByMatricula(request.getMatricula()).isPresent()) {
-            throw new IllegalArgumentException("Já existe um discente com esta matrícula: " + request.getMatricula());
+            throw new DuplicateEntityException("Discente", "matrícula", request.getMatricula());
         }
 
         // Validar email único
         if (repository.findByEmail(request.getEmail()).isPresent()) {
-            throw new IllegalArgumentException("Já existe um discente com este email: " + request.getEmail());
+            throw new DuplicateEntityException("Discente", "email", request.getEmail());
         }
 
         // Validar CPF único (se informado)
         if (request.getCpf() != null && repository.findByCpf(request.getCpf()).isPresent()) {
-            throw new IllegalArgumentException("Já existe um discente com este CPF");
+            throw new DuplicateEntityException("Discente", "CPF", request.getCpf());
         }
 
         // Validar ORCID único (se informado)
         if (request.getOrcid() != null && repository.findByOrcid(request.getOrcid()).isPresent()) {
-            throw new IllegalArgumentException("Já existe um discente com este ORCID");
+            throw new DuplicateEntityException("Discente", "ORCID", request.getOrcid());
         }
 
         // Validar Lattes único (se informado)
         if (request.getLattesId() != null && repository.findByLattesId(request.getLattesId()).isPresent()) {
-            throw new IllegalArgumentException("Já existe um discente com este Lattes ID");
+            throw new DuplicateEntityException("Discente", "Lattes ID", request.getLattesId());
         }
 
         DiscenteEntity entity = mapper.toEntity(request);
@@ -128,7 +130,7 @@ public class DiscenteService {
         // Adicionar orientador se informado
         if (request.getOrientadorId() != null) {
             DocenteEntity orientador = docenteRepository.findById(request.getOrientadorId())
-                    .orElseThrow(() -> new IllegalArgumentException("Orientador não encontrado: " + request.getOrientadorId()));
+                    .orElseThrow(() -> new EntityNotFoundException("Docente", request.getOrientadorId()));
             entity.setOrientador(orientador);
         }
 
@@ -147,14 +149,14 @@ public class DiscenteService {
                     // Validar email único (se alterado)
                     if (request.getEmail() != null && !request.getEmail().equals(entity.getEmail())) {
                         repository.findByEmail(request.getEmail()).ifPresent(existing -> {
-                            throw new IllegalArgumentException("Já existe um discente com este email");
+                            throw new DuplicateEntityException("Discente", "email", request.getEmail());
                         });
                     }
 
                     // Validar CPF único (se alterado)
                     if (request.getCpf() != null && !request.getCpf().equals(entity.getCpf())) {
                         repository.findByCpf(request.getCpf()).ifPresent(existing -> {
-                            throw new IllegalArgumentException("Já existe um discente com este CPF");
+                            throw new DuplicateEntityException("Discente", "CPF", request.getCpf());
                         });
                     }
 
@@ -163,7 +165,7 @@ public class DiscenteService {
                     // Atualizar orientador se informado
                     if (request.getOrientadorId() != null) {
                         DocenteEntity orientador = docenteRepository.findById(request.getOrientadorId())
-                                .orElseThrow(() -> new IllegalArgumentException("Orientador não encontrado"));
+                                .orElseThrow(() -> new EntityNotFoundException("Docente", request.getOrientadorId()));
                         entity.setOrientador(orientador);
                     }
 
