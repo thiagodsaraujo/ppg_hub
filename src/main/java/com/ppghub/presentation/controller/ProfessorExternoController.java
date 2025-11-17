@@ -2,6 +2,7 @@ package com.ppghub.presentation.controller;
 
 import com.ppghub.application.dto.request.ProfessorExternoCreateRequest;
 import com.ppghub.application.dto.request.ProfessorExternoUpdateRequest;
+import com.ppghub.application.dto.response.PagedResponse;
 import com.ppghub.application.dto.response.ProfessorExternoResponse;
 import com.ppghub.domain.service.ProfessorExternoService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,7 +11,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -84,11 +84,11 @@ public class ProfessorExternoController {
 
     @GetMapping("/search")
     @Operation(summary = "Buscar professores externos por nome", description = "Busca professores externos por nome (parcial)")
-    public ResponseEntity<Page<ProfessorExternoResponse>> buscarPorNome(
+    public ResponseEntity<PagedResponse<ProfessorExternoResponse>> buscarPorNome(
             @Parameter(description = "Nome ou parte do nome") @RequestParam String nome,
             @PageableDefault(size = 20) Pageable pageable) {
         log.info("Buscando professores externos por nome: {}", nome);
-        return ResponseEntity.ok(professorExternoService.searchByNome(nome, pageable));
+        return ResponseEntity.ok(PagedResponse.of(professorExternoService.searchByNome(nome, pageable)));
     }
 
     @PostMapping

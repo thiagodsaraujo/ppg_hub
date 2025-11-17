@@ -3,6 +3,7 @@ package com.ppghub.presentation.controller;
 import com.ppghub.application.dto.request.DiscenteCreateRequest;
 import com.ppghub.application.dto.request.DiscenteUpdateRequest;
 import com.ppghub.application.dto.response.DiscenteResponse;
+import com.ppghub.application.dto.response.PagedResponse;
 import com.ppghub.domain.service.DiscenteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -10,7 +11,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -78,11 +78,11 @@ public class DiscenteController {
 
     @GetMapping("/programa/{programaId}/page")
     @Operation(summary = "Listar discentes por programa (paginado)", description = "Retorna discentes de um programa com paginação")
-    public ResponseEntity<Page<DiscenteResponse>> listarPorProgramaPaginado(
+    public ResponseEntity<PagedResponse<DiscenteResponse>> listarPorProgramaPaginado(
             @Parameter(description = "ID do programa") @PathVariable Long programaId,
             @PageableDefault(size = 20) Pageable pageable) {
         log.info("Listando discentes do programa ID: {} com paginação", programaId);
-        return ResponseEntity.ok(discenteService.findByPrograma(programaId, pageable));
+        return ResponseEntity.ok(PagedResponse.of(discenteService.findByPrograma(programaId, pageable)));
     }
 
     @GetMapping("/orientador/{orientadorId}")
@@ -110,11 +110,11 @@ public class DiscenteController {
 
     @GetMapping("/search")
     @Operation(summary = "Buscar discentes por nome", description = "Busca discentes por nome (parcial)")
-    public ResponseEntity<Page<DiscenteResponse>> buscarPorNome(
+    public ResponseEntity<PagedResponse<DiscenteResponse>> buscarPorNome(
             @Parameter(description = "Nome ou parte do nome") @RequestParam String nome,
             @PageableDefault(size = 20) Pageable pageable) {
         log.info("Buscando discentes por nome: {}", nome);
-        return ResponseEntity.ok(discenteService.searchByNome(nome, pageable));
+        return ResponseEntity.ok(PagedResponse.of(discenteService.searchByNome(nome, pageable)));
     }
 
     @PostMapping

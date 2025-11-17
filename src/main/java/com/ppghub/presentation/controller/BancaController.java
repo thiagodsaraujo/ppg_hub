@@ -3,6 +3,7 @@ package com.ppghub.presentation.controller;
 import com.ppghub.application.dto.request.BancaCreateRequest;
 import com.ppghub.application.dto.request.BancaUpdateRequest;
 import com.ppghub.application.dto.response.BancaResponse;
+import com.ppghub.application.dto.response.PagedResponse;
 import com.ppghub.domain.service.BancaService;
 import com.ppghub.infrastructure.persistence.entity.BancaEntity;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,7 +12,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -61,11 +61,11 @@ public class BancaController {
 
     @GetMapping("/programa/{programaId}")
     @Operation(summary = "Listar bancas por programa", description = "Retorna bancas de um programa com paginação")
-    public ResponseEntity<Page<BancaResponse>> listarPorPrograma(
+    public ResponseEntity<PagedResponse<BancaResponse>> listarPorPrograma(
             @Parameter(description = "ID do programa") @PathVariable Long programaId,
             @PageableDefault(size = 20) Pageable pageable) {
         log.info("Listando bancas do programa ID: {} com paginação", programaId);
-        return ResponseEntity.ok(bancaService.findByPrograma(programaId, pageable));
+        return ResponseEntity.ok(PagedResponse.of(bancaService.findByPrograma(programaId, pageable)));
     }
 
     @GetMapping("/proximas")
@@ -77,10 +77,10 @@ public class BancaController {
 
     @GetMapping("/proximas/page")
     @Operation(summary = "Listar próximas bancas (paginado)", description = "Retorna próximas bancas com paginação")
-    public ResponseEntity<Page<BancaResponse>> listarProximasPaginado(
+    public ResponseEntity<PagedResponse<BancaResponse>> listarProximasPaginado(
             @PageableDefault(size = 20) Pageable pageable) {
         log.info("Listando próximas bancas com paginação");
-        return ResponseEntity.ok(bancaService.findProximasBancas(pageable));
+        return ResponseEntity.ok(PagedResponse.of(bancaService.findProximasBancas(pageable)));
     }
 
     @GetMapping("/sem-ata")
