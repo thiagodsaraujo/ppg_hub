@@ -1,5 +1,8 @@
 package com.ppghub.application.dto.request;
 
+import com.ppghub.domain.validation.ValidCPF;
+import com.ppghub.domain.validation.ValidLattesId;
+import com.ppghub.domain.validation.ValidORCID;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -33,6 +36,7 @@ public class DiscenteCreateRequest {
     @Size(max = 255)
     private String email;
 
+    @ValidCPF
     @Size(max = 14)
     private String cpf;
 
@@ -57,9 +61,11 @@ public class DiscenteCreateRequest {
     private String tituloTese;
 
     // Identificadores Acadêmicos
+    @ValidLattesId
     @Size(max = 50)
     private String lattesId;
 
+    @ValidORCID
     @Size(max = 19)
     private String orcid;
 

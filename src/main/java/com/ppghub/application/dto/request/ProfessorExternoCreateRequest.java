@@ -1,5 +1,7 @@
 package com.ppghub.application.dto.request;
 
+import com.ppghub.domain.validation.ValidLattesId;
+import com.ppghub.domain.validation.ValidORCID;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -39,9 +41,11 @@ public class ProfessorExternoCreateRequest {
     private String telefone;
 
     // Identificadores Acadêmicos
+    @ValidLattesId
     @Size(max = 50)
     private String lattesId;
 
+    @ValidORCID
     @Size(max = 19)
     private String orcid;
 
