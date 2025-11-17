@@ -7,6 +7,8 @@ import com.ppghub.application.mapper.BancaMapper;
 import com.ppghub.config.CacheConfig;
 import com.ppghub.domain.exception.BusinessRuleException;
 import com.ppghub.domain.exception.EntityNotFoundException;
+import com.ppghub.domain.model.ComposicaoBanca;
+import com.ppghub.domain.service.banca.validator.BancaValidatorFactory;
 import com.ppghub.infrastructure.persistence.entity.*;
 import com.ppghub.infrastructure.persistence.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -37,11 +39,11 @@ public class BancaService {
     private final JpaProgramaRepository programaRepository;
     private final JpaMembroBancaRepository membroBancaRepository;
     private final BancaMapper mapper;
+    private final BancaValidatorFactory validatorFactory;
 
-    // Regras de negócio
-    private static final int MIN_MEMBROS_TITULARES = 3;
-    private static final int MAX_MEMBROS_TITULARES = 5;
-    private static final int MIN_MEMBROS_EXTERNOS = 1;
+    // Regras de negócio foram movidas para os validadores específicos:
+    // - DefesaComposicaoValidator: regras de bancas de defesa
+    // - QualificacaoComposicaoValidator: regras de bancas de qualificação
 
     public List<BancaResponse> findAll() {
         log.debug("Buscando todas as bancas");
@@ -103,6 +105,11 @@ public class BancaService {
         entity.setDiscente(discente);
         entity.setPrograma(programa);
 
+        // ✅ Validar composição da banca se houver membros
+        if (!entity.getMembros().isEmpty()) {
+            validarComposicaoBanca(entity);
+        }
+
         BancaEntity saved = repository.save(entity);
         log.info("Banca criada com sucesso: ID {}", saved.getId());
 
@@ -127,6 +134,11 @@ public class BancaService {
                     }
 
                     mapper.updateEntityFromRequest(request, entity);
+
+                    // ✅ Validar composição da banca se houver membros
+                    if (!entity.getMembros().isEmpty()) {
+                        validarComposicaoBanca(entity);
+                    }
 
                     BancaEntity updated = repository.save(entity);
                     log.info("Banca atualizada com sucesso: ID {}", updated.getId());
@@ -232,48 +244,29 @@ public class BancaService {
     }
 
     /**
-     * Valida a composição da banca de acordo com as regras de negócio:
-     * - Deve ter entre 3 e 5 membros titulares
-     * - Deve ter pelo menos 1 membro externo
-     * - Não deve ter membros duplicados
+     * Valida a composição da banca usando o validador apropriado
+     * baseado no tipo de banca (Defesa ou Qualificação).
+     *
+     * <p>
+     * Este método aplica o Strategy Pattern para selecionar e executar
+     * o validador correto para cada tipo de banca, garantindo que as
+     * regras específicas sejam aplicadas.
+     * </p>
+     *
+     * @param banca Entidade da banca a validar
+     * @throws BusinessRuleException se a composição violar as regras do tipo de banca
      */
-    public void validarComposicaoBanca(Long bancaId) {
-        log.debug("Validando composição da banca ID: {}", bancaId);
+    private void validarComposicaoBanca(BancaEntity banca) {
+        log.debug("Validando composição da banca tipo: {}", banca.getTipoBanca());
 
-        List<MembroBancaEntity> membros = membroBancaRepository.findByBancaId(bancaId);
+        ComposicaoBanca composicao = ComposicaoBanca.builder()
+                .membros(banca.getMembros())
+                .build();
 
-        // Contar membros titulares
-        long numTitulares = membros.stream()
-                .filter(m -> m.getTipoMembro() == MembroBancaEntity.TipoMembro.TITULAR)
-                .count();
+        validatorFactory.getValidator(banca.getTipoBanca())
+                .validarComposicao(composicao);
 
-        if (numTitulares < MIN_MEMBROS_TITULARES) {
-            throw new BusinessRuleException(
-                String.format("Banca deve ter no mínimo %d membros titulares. Atual: %d",
-                    MIN_MEMBROS_TITULARES, numTitulares)
-            );
-        }
-
-        if (numTitulares > MAX_MEMBROS_TITULARES) {
-            throw new BusinessRuleException(
-                String.format("Banca deve ter no máximo %d membros titulares. Atual: %d",
-                    MAX_MEMBROS_TITULARES, numTitulares)
-            );
-        }
-
-        // Contar membros externos
-        long numExternos = membros.stream()
-                .filter(MembroBancaEntity::isExterno)
-                .count();
-
-        if (numExternos < MIN_MEMBROS_EXTERNOS) {
-            throw new BusinessRuleException(
-                String.format("Banca deve ter pelo menos %d membro externo. Atual: %d",
-                    MIN_MEMBROS_EXTERNOS, numExternos)
-            );
-        }
-
-        log.debug("Composição da banca validada: {} titulares, {} externos", numTitulares, numExternos);
+        log.debug("Composição da banca validada com sucesso");
     }
 
     /**
