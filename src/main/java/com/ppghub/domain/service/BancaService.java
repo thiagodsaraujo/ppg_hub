@@ -4,12 +4,15 @@ import com.ppghub.application.dto.request.BancaCreateRequest;
 import com.ppghub.application.dto.request.BancaUpdateRequest;
 import com.ppghub.application.dto.response.BancaResponse;
 import com.ppghub.application.mapper.BancaMapper;
+import com.ppghub.config.CacheConfig;
 import com.ppghub.domain.exception.BusinessRuleException;
 import com.ppghub.domain.exception.EntityNotFoundException;
 import com.ppghub.infrastructure.persistence.entity.*;
 import com.ppghub.infrastructure.persistence.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -45,6 +48,7 @@ public class BancaService {
         return mapper.toResponseList(repository.findAll());
     }
 
+    @Cacheable(value = CacheConfig.BANCAS_CACHE, key = "#id", unless = "#result == null")
     public Optional<BancaResponse> findById(Long id) {
         log.debug("Buscando banca por ID: {}", id);
         return repository.findById(id)
@@ -79,6 +83,7 @@ public class BancaService {
     }
 
     @Transactional
+    @CacheEvict(value = CacheConfig.BANCAS_CACHE, allEntries = true)
     public BancaResponse create(BancaCreateRequest request) {
         log.info("Criando nova banca para discente ID: {}", request.getDiscenteId());
 
@@ -105,6 +110,7 @@ public class BancaService {
     }
 
     @Transactional
+    @CacheEvict(value = CacheConfig.BANCAS_CACHE, key = "#id")
     public Optional<BancaResponse> update(Long id, BancaUpdateRequest request) {
         log.info("Atualizando banca ID: {}", id);
 
@@ -132,6 +138,7 @@ public class BancaService {
      * Marca a banca como realizada e registra o resultado.
      */
     @Transactional
+    @CacheEvict(value = CacheConfig.BANCAS_CACHE, key = "#id")
     public Optional<BancaResponse> marcarComoRealizada(Long id, BancaEntity.ResultadoBanca resultado) {
         log.info("Marcando banca como realizada: ID {}, Resultado: {}", id, resultado);
 
@@ -156,6 +163,7 @@ public class BancaService {
      * Cancela uma banca agendada.
      */
     @Transactional
+    @CacheEvict(value = CacheConfig.BANCAS_CACHE, key = "#id")
     public Optional<BancaResponse> cancelar(Long id, String motivo) {
         log.info("Cancelando banca ID: {}", id);
 
@@ -181,6 +189,7 @@ public class BancaService {
      * Reagenda uma banca para nova data/hora.
      */
     @Transactional
+    @CacheEvict(value = CacheConfig.BANCAS_CACHE, key = "#id")
     public Optional<BancaResponse> reagendar(Long id, LocalDateTime novaDataHora) {
         log.info("Reagendando banca ID: {} para {}", id, novaDataHora);
 
@@ -203,6 +212,7 @@ public class BancaService {
     }
 
     @Transactional
+    @CacheEvict(value = CacheConfig.BANCAS_CACHE, key = "#id")
     public boolean delete(Long id) {
         log.info("Deletando banca ID: {}", id);
 

@@ -4,6 +4,7 @@ import com.ppghub.application.dto.request.DiscenteCreateRequest;
 import com.ppghub.application.dto.request.DiscenteUpdateRequest;
 import com.ppghub.application.dto.response.DiscenteResponse;
 import com.ppghub.application.mapper.DiscenteMapper;
+import com.ppghub.config.CacheConfig;
 import com.ppghub.domain.exception.DuplicateEntityException;
 import com.ppghub.domain.exception.EntityNotFoundException;
 import com.ppghub.infrastructure.persistence.entity.DiscenteEntity;
@@ -14,6 +15,8 @@ import com.ppghub.infrastructure.persistence.repository.JpaDocenteRepository;
 import com.ppghub.infrastructure.persistence.repository.JpaProgramaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -41,6 +44,7 @@ public class DiscenteService {
         return mapper.toResponseList(repository.findAll());
     }
 
+    @Cacheable(value = CacheConfig.DISCENTES_CACHE, key = "#id", unless = "#result == null")
     public Optional<DiscenteResponse> findById(Long id) {
         log.debug("Buscando discente por ID: {}", id);
         return repository.findById(id)
@@ -92,6 +96,7 @@ public class DiscenteService {
     }
 
     @Transactional
+    @CacheEvict(value = CacheConfig.DISCENTES_CACHE, allEntries = true)
     public DiscenteResponse create(DiscenteCreateRequest request) {
         log.info("Criando novo discente: {}", request.getNome());
 
@@ -141,6 +146,7 @@ public class DiscenteService {
     }
 
     @Transactional
+    @CacheEvict(value = CacheConfig.DISCENTES_CACHE, key = "#id")
     public Optional<DiscenteResponse> update(Long id, DiscenteUpdateRequest request) {
         log.info("Atualizando discente ID: {}", id);
 
@@ -176,6 +182,7 @@ public class DiscenteService {
     }
 
     @Transactional
+    @CacheEvict(value = CacheConfig.DISCENTES_CACHE, key = "#id")
     public boolean delete(Long id) {
         log.info("Deletando discente ID: {}", id);
 

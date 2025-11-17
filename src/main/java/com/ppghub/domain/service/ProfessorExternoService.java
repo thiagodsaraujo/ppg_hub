@@ -4,11 +4,14 @@ import com.ppghub.application.dto.request.ProfessorExternoCreateRequest;
 import com.ppghub.application.dto.request.ProfessorExternoUpdateRequest;
 import com.ppghub.application.dto.response.ProfessorExternoResponse;
 import com.ppghub.application.mapper.ProfessorExternoMapper;
+import com.ppghub.config.CacheConfig;
 import com.ppghub.domain.exception.DuplicateEntityException;
 import com.ppghub.infrastructure.persistence.entity.ProfessorExternoEntity;
 import com.ppghub.infrastructure.persistence.repository.JpaProfessorExternoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -36,6 +39,7 @@ public class ProfessorExternoService {
         return mapper.toResponseList(repository.findAll());
     }
 
+    @Cacheable(value = CacheConfig.PROFESSORES_EXTERNOS_CACHE, key = "#id", unless = "#result == null")
     public Optional<ProfessorExternoResponse> findById(Long id) {
         log.debug("Buscando professor externo por ID: {}", id);
         return repository.findById(id)
@@ -101,6 +105,7 @@ public class ProfessorExternoService {
     }
 
     @Transactional
+    @CacheEvict(value = CacheConfig.PROFESSORES_EXTERNOS_CACHE, allEntries = true)
     public ProfessorExternoResponse create(ProfessorExternoCreateRequest request) {
         log.info("Criando novo professor externo: {}", request.getNome());
 
@@ -127,6 +132,7 @@ public class ProfessorExternoService {
     }
 
     @Transactional
+    @CacheEvict(value = CacheConfig.PROFESSORES_EXTERNOS_CACHE, key = "#id")
     public Optional<ProfessorExternoResponse> update(Long id, ProfessorExternoUpdateRequest request) {
         log.info("Atualizando professor externo ID: {}", id);
 
@@ -159,6 +165,7 @@ public class ProfessorExternoService {
      * Indica que os dados foram verificados/enriquecidos via fontes externas.
      */
     @Transactional
+    @CacheEvict(value = CacheConfig.PROFESSORES_EXTERNOS_CACHE, key = "#id")
     public Optional<ProfessorExternoResponse> marcarComoValidado(Long id) {
         log.info("Marcando professor externo como validado: ID {}", id);
 
@@ -172,6 +179,7 @@ public class ProfessorExternoService {
     }
 
     @Transactional
+    @CacheEvict(value = CacheConfig.PROFESSORES_EXTERNOS_CACHE, key = "#id")
     public boolean delete(Long id) {
         log.info("Deletando professor externo ID: {}", id);
 
@@ -189,6 +197,7 @@ public class ProfessorExternoService {
      * Preferível ao delete quando há referências em bancas.
      */
     @Transactional
+    @CacheEvict(value = CacheConfig.PROFESSORES_EXTERNOS_CACHE, key = "#id")
     public Optional<ProfessorExternoResponse> inativar(Long id) {
         log.info("Inativando professor externo ID: {}", id);
 

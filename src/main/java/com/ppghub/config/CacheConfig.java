@@ -30,6 +30,12 @@ public class CacheConfig {
     public static final String PUBLICACOES_CACHE = "publicacoes";
     public static final String OPENALEX_API_CACHE = "openalex_api";
 
+    // Caches do módulo Bancas
+    public static final String BANCAS_CACHE = "bancas";
+    public static final String DISCENTES_CACHE = "discentes";
+    public static final String PROFESSORES_EXTERNOS_CACHE = "professores_externos";
+    public static final String MEMBROS_BANCA_CACHE = "membros_banca";
+
     @Bean
     public ObjectMapper redisObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
@@ -81,6 +87,15 @@ public class CacheConfig {
                 defaultConfig.entryTtl(Duration.ofDays(1)))
             .withCacheConfiguration(OPENALEX_API_CACHE,
                 defaultConfig.entryTtl(Duration.ofHours(6))) // OpenAlex cache: 6 horas
+            // Módulo Bancas
+            .withCacheConfiguration(BANCAS_CACHE,
+                defaultConfig.entryTtl(Duration.ofMinutes(30))) // Bancas mudam com frequência
+            .withCacheConfiguration(DISCENTES_CACHE,
+                defaultConfig.entryTtl(Duration.ofHours(1))) // Discentes relativamente estáveis
+            .withCacheConfiguration(PROFESSORES_EXTERNOS_CACHE,
+                defaultConfig.entryTtl(Duration.ofHours(2))) // Professores externos estáveis
+            .withCacheConfiguration(MEMBROS_BANCA_CACHE,
+                defaultConfig.entryTtl(Duration.ofMinutes(30))) // Membros vinculados às bancas
             .build();
     }
 }

@@ -105,6 +105,23 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorResponse);
     }
 
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleRateLimitExceededException(RateLimitExceededException ex) {
+        log.warn("Rate limit exceeded (Bucket4j): {}", ex.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.TOO_MANY_REQUESTS.value())
+                .error("Too Many Requests")
+                .message(ex.getMessage())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()))
+                .header("X-Rate-Limit-Retry-After-Seconds", String.valueOf(ex.getRetryAfterSeconds()))
+                .body(errorResponse);
+    }
+
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ErrorResponse> handleUnauthorizedException(UnauthorizedException ex) {
         log.warn("Unauthorized access: {}", ex.getMessage());

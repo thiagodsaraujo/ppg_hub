@@ -66,6 +66,40 @@ server:
     include-message: always
     include-stacktrace: on_param
 
+# Rate Limiting Configuration
+rate-limit:
+  requests-per-minute: ${RATE_LIMIT_RPM:100} # Limite de requisições por minuto por IP
+
+# Resilience4j Circuit Breaker Configuration
+resilience4j:
+  circuitbreaker:
+    instances:
+      openalex:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10  # Janela de 10 requisições
+        minimum-number-of-calls: 5  # Mínimo de chamadas antes de calcular taxa de erro
+        failure-rate-threshold: 50  # Abre circuito se 50% falharem
+        wait-duration-in-open-state: 60s  # Aguarda 60s antes de tentar half-open
+        permitted-number-of-calls-in-half-open-state: 3  # Permite 3 chamadas em half-open
+        automatic-transition-from-open-to-half-open-enabled: true
+        record-exceptions:
+          - com.ppghub.domain.exception.OpenAlexException
+          - org.springframework.web.reactive.function.client.WebClientResponseException
+          - java.net.ConnectException
+          - java.net.SocketTimeoutException
+
+  retry:
+    instances:
+      openalex:
+        max-attempts: 3
+        wait-duration: 2s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - org.springframework.web.reactive.function.client.WebClientResponseException.ServiceUnavailable
+          - org.springframework.web.reactive.function.client.WebClientResponseException.TooManyRequests
+          - java.net.ConnectException
+
 # OpenAlex Configuration
 openalex:
   api:
