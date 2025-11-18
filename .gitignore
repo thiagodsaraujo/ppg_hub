@@ -1,3 +1,10 @@
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.log
+
 # Maven
 target/
 pom.xml.tag
@@ -22,6 +29,9 @@ build/
 *.iws
 *.iml
 *.ipr
+*.iml
+*.ipr
+*.iws
 .vscode/
 *.swp
 *.swo
@@ -30,6 +40,27 @@ build/
 
 # Spring Boot
 .springBeans
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
+.metadata
+.recommenders
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# IntelliJ IDEA
+out/
+.idea_modules/
+
+# Spring Boot
+spring-boot-starter-parent/
 
 # Logs
 logs/
@@ -49,6 +80,53 @@ Thumbs.db
 application-local.yml
 application-dev.yml
 application-prod.yml
+application-*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~.nib
+
+# OS
+Thumbs.db
+.DS_Store
+.Spotlight-V100
+.Trashes
+
+# Application specific
+application-local.yml
+application-dev.yml
+!application.yml
+.env.local
+
+# Python (arquivos antigos que serão removidos)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg
+.mypy_cache/
+.ruff_cache/
 
 # Database
 *.db
@@ -58,3 +136,8 @@ application-prod.yml
 tmp/
 temp/
 *.tmp
+*.sqlite3
+
+# Other
+*.orig
+node_modules/
