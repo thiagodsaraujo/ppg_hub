@@ -1,5 +1,6 @@
 package br.edu.ppg.hub.shared.config;
 
+import br.edu.ppg.hub.auth.infrastructure.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -41,9 +42,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    // Será injetado quando implementarmos
-    // private final JwtAuthenticationFilter jwtAuthFilter;
-    // private final UserDetailsService userDetailsService;
+    private final JwtAuthenticationFilter jwtAuthFilter;
+    private final UserDetailsService userDetailsService;
 
     /**
      * Configuração principal de segurança.
@@ -92,11 +92,11 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
 
-                // Adicionar filtro JWT antes do filtro de autenticação padrão
-                // .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-
                 // Provider de autenticação
-                // .authenticationProvider(authenticationProvider())
+                .authenticationProvider(authenticationProvider())
+
+                // Adicionar filtro JWT antes do filtro de autenticação padrão
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
         ;
 
         return http.build();
@@ -165,7 +165,6 @@ public class SecurityConfig {
      * AuthenticationProvider usando DaoAuthenticationProvider.
      * Usa UserDetailsService e PasswordEncoder.
      */
-    /*
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -173,5 +172,4 @@ public class SecurityConfig {
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }
-    */
 }
