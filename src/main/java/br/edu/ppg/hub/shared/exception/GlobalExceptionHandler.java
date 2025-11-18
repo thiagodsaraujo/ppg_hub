@@ -1,4 +1,4 @@
-package br.edu.ppg.hub.exception;
+package br.edu.ppg.hub.shared.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

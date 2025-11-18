@@ -1,14 +1,14 @@
-package br.edu.ppg.hub.service;
+package br.edu.ppg.hub.core.application.service;
 
-import br.edu.ppg.hub.dto.InstituicaoCreateDTO;
-import br.edu.ppg.hub.dto.InstituicaoResponseDTO;
-import br.edu.ppg.hub.dto.InstituicaoUpdateDTO;
-import br.edu.ppg.hub.dto.mapper.InstituicaoMapper;
-import br.edu.ppg.hub.exception.DuplicateResourceException;
-import br.edu.ppg.hub.exception.ResourceNotFoundException;
-import br.edu.ppg.hub.model.Instituicao;
-import br.edu.ppg.hub.repository.InstituicaoRepository;
-import br.edu.ppg.hub.validation.CNPJValidator;
+import br.edu.ppg.hub.core.application.dto.instituicao.InstituicaoCreateDTO;
+import br.edu.ppg.hub.core.application.dto.instituicao.InstituicaoResponseDTO;
+import br.edu.ppg.hub.core.application.dto.instituicao.InstituicaoUpdateDTO;
+import br.edu.ppg.hub.core.application.dto.instituicao.InstituicaoMapper;
+import br.edu.ppg.hub.shared.exception.DuplicateResourceException;
+import br.edu.ppg.hub.shared.exception.ResourceNotFoundException;
+import br.edu.ppg.hub.core.domain.model.Instituicao;
+import br.edu.ppg.hub.core.infrastructure.repository.InstituicaoRepository;
+import br.edu.ppg.hub.shared.validation.CNPJValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;

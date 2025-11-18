@@ -1,11 +1,10 @@
-package br.edu.ppg.hub.dto;
+package br.edu.ppg.hub.core.application.dto.instituicao;
 
-import br.edu.ppg.hub.validation.ValidCNPJ;
-import br.edu.ppg.hub.validation.ValidCodigo;
+import br.edu.ppg.hub.shared.validation.ValidCNPJ;
+import br.edu.ppg.hub.shared.validation.ValidCodigo;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,40 +14,45 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
- * DTO para atualização de instituição.
+ * DTO para criação de instituição.
  *
- * Todos os campos são opcionais para permitir atualização parcial.
- * Apenas campos fornecidos serão atualizados.
+ * Contém todos os campos necessários para criar uma nova instituição,
+ * com validações apropriadas.
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Schema(description = "Dados para atualização de uma instituição (todos os campos são opcionais)")
-public class InstituicaoUpdateDTO {
+@Schema(description = "Dados para criação de uma instituição")
+public class InstituicaoCreateDTO {
 
-    @Schema(description = "Código único da instituição", example = "UEPB")
+    @Schema(description = "Código único da instituição", example = "UEPB", required = true)
+    @NotBlank(message = "Código é obrigatório")
     @Size(min = 2, max = 20, message = "Código deve ter entre 2 e 20 caracteres")
     @ValidCodigo
     private String codigo;
 
     @Schema(description = "Nome oficial completo da instituição",
-            example = "Universidade Estadual da Paraíba")
+            example = "Universidade Estadual da Paraíba", required = true)
+    @NotBlank(message = "Nome completo é obrigatório")
     @Size(min = 5, max = 500, message = "Nome completo deve ter entre 5 e 500 caracteres")
     @JsonProperty("nome_completo")
     private String nomeCompleto;
 
-    @Schema(description = "Nome abreviado para exibição", example = "UEPB")
+    @Schema(description = "Nome abreviado para exibição", example = "UEPB", required = true)
+    @NotBlank(message = "Nome abreviado é obrigatório")
     @Size(min = 2, max = 50, message = "Nome abreviado deve ter entre 2 e 50 caracteres")
     @JsonProperty("nome_abreviado")
     private String nomeAbreviado;
 
-    @Schema(description = "Sigla oficial da instituição", example = "UEPB")
+    @Schema(description = "Sigla oficial da instituição", example = "UEPB", required = true)
+    @NotBlank(message = "Sigla é obrigatória")
     @Size(min = 2, max = 10, message = "Sigla deve ter entre 2 e 10 caracteres")
     private String sigla;
 
-    @Schema(description = "Tipo da instituição", example = "Estadual",
+    @Schema(description = "Tipo da instituição", example = "Estadual", required = true,
             allowableValues = {"Federal", "Estadual", "Municipal", "Privada"})
+    @NotBlank(message = "Tipo é obrigatório")
     @Pattern(regexp = "^(Federal|Estadual|Municipal|Privada)$",
              message = "Tipo deve ser: Federal, Estadual, Municipal ou Privada")
     private String tipo;
@@ -94,8 +98,10 @@ public class InstituicaoUpdateDTO {
     private String rorId;
 
     @Schema(description = "Se a instituição está ativa no sistema", example = "true")
-    private Boolean ativo;
+    @Builder.Default
+    private Boolean ativo = true;
 
     @Schema(description = "Configurações específicas da instituição")
-    private Map<String, Object> configuracoes;
+    @Builder.Default
+    private Map<String, Object> configuracoes = Map.of();
 }

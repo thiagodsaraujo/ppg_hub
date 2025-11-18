@@ -1,9 +1,9 @@
-package br.edu.ppg.hub.dto.mapper;
+package br.edu.ppg.hub.core.application.dto.instituicao;
 
-import br.edu.ppg.hub.dto.InstituicaoCreateDTO;
-import br.edu.ppg.hub.dto.InstituicaoResponseDTO;
-import br.edu.ppg.hub.dto.InstituicaoUpdateDTO;
-import br.edu.ppg.hub.model.Instituicao;
+import br.edu.ppg.hub.core.application.dto.instituicao.InstituicaoCreateDTO;
+import br.edu.ppg.hub.core.application.dto.instituicao.InstituicaoResponseDTO;
+import br.edu.ppg.hub.core.application.dto.instituicao.InstituicaoUpdateDTO;
+import br.edu.ppg.hub.core.domain.model.Instituicao;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;

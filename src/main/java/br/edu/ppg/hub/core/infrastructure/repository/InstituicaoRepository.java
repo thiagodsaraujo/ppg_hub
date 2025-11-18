@@ -1,6 +1,6 @@
-package br.edu.ppg.hub.repository;
+package br.edu.ppg.hub.core.infrastructure.repository;
 
-import br.edu.ppg.hub.model.Instituicao;
+import br.edu.ppg.hub.core.domain.model.Instituicao;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

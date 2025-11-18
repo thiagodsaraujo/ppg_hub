@@ -1,4 +1,4 @@
-package br.edu.ppg.hub.validation;
+package br.edu.ppg.hub.shared.validation;
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;

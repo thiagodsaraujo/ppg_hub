@@ -1,9 +1,9 @@
-package br.edu.ppg.hub.controller;
+package br.edu.ppg.hub.core.presentation.controller;
 
-import br.edu.ppg.hub.dto.InstituicaoCreateDTO;
-import br.edu.ppg.hub.dto.InstituicaoResponseDTO;
-import br.edu.ppg.hub.dto.InstituicaoUpdateDTO;
-import br.edu.ppg.hub.service.InstituicaoService;
+import br.edu.ppg.hub.core.application.dto.instituicao.InstituicaoCreateDTO;
+import br.edu.ppg.hub.core.application.dto.instituicao.InstituicaoResponseDTO;
+import br.edu.ppg.hub.core.application.dto.instituicao.InstituicaoUpdateDTO;
+import br.edu.ppg.hub.core.application.service.InstituicaoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;

@@ -1,4 +1,4 @@
-package br.edu.ppg.hub.config;
+package br.edu.ppg.hub.shared.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

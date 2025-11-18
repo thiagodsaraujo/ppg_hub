@@ -1,4 +1,4 @@
-package br.edu.ppg.hub.exception;
+package br.edu.ppg.hub.shared.exception;
 
 /**
  * Exceção lançada quando um recurso não é encontrado.

@@ -1,4 +1,4 @@
-package br.edu.ppg.hub.model; // Declara o pacote onde a classe está localizada
+package br.edu.ppg.hub.core.domain.model; // Declara o pacote onde a classe está localizada
 
 // === IMPORTS DE BIBLIOTECAS EXTERNAS ===
 // Importa suporte para tipos JSON do Hypersistence Utils (permite armazenar JSON no PostgreSQL)

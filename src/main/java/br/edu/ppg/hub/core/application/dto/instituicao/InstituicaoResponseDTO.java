@@ -1,10 +1,7 @@
-package br.edu.ppg.hub.dto;
+package br.edu.ppg.hub.core.application.dto.instituicao;
 
-import br.edu.ppg.hub.validation.ValidCNPJ;
-import br.edu.ppg.hub.validation.ValidCodigo;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,55 +11,43 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
- * DTO para criação de instituição.
+ * DTO para resposta de consulta de instituição.
  *
- * Contém todos os campos necessários para criar uma nova instituição,
- * com validações apropriadas.
+ * Contém todos os dados da instituição, incluindo campos automáticos
+ * como ID e timestamps.
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Schema(description = "Dados para criação de uma instituição")
-public class InstituicaoCreateDTO {
+@Schema(description = "Dados completos de uma instituição")
+public class InstituicaoResponseDTO {
 
-    @Schema(description = "Código único da instituição", example = "UEPB", required = true)
-    @NotBlank(message = "Código é obrigatório")
-    @Size(min = 2, max = 20, message = "Código deve ter entre 2 e 20 caracteres")
-    @ValidCodigo
+    @Schema(description = "ID único da instituição", example = "1")
+    private Long id;
+
+    @Schema(description = "Código único da instituição", example = "UEPB")
     private String codigo;
 
     @Schema(description = "Nome oficial completo da instituição",
-            example = "Universidade Estadual da Paraíba", required = true)
-    @NotBlank(message = "Nome completo é obrigatório")
-    @Size(min = 5, max = 500, message = "Nome completo deve ter entre 5 e 500 caracteres")
+            example = "Universidade Estadual da Paraíba")
     @JsonProperty("nome_completo")
     private String nomeCompleto;
 
-    @Schema(description = "Nome abreviado para exibição", example = "UEPB", required = true)
-    @NotBlank(message = "Nome abreviado é obrigatório")
-    @Size(min = 2, max = 50, message = "Nome abreviado deve ter entre 2 e 50 caracteres")
+    @Schema(description = "Nome abreviado para exibição", example = "UEPB")
     @JsonProperty("nome_abreviado")
     private String nomeAbreviado;
 
-    @Schema(description = "Sigla oficial da instituição", example = "UEPB", required = true)
-    @NotBlank(message = "Sigla é obrigatória")
-    @Size(min = 2, max = 10, message = "Sigla deve ter entre 2 e 10 caracteres")
+    @Schema(description = "Sigla oficial da instituição", example = "UEPB")
     private String sigla;
 
-    @Schema(description = "Tipo da instituição", example = "Estadual", required = true,
-            allowableValues = {"Federal", "Estadual", "Municipal", "Privada"})
-    @NotBlank(message = "Tipo é obrigatório")
-    @Pattern(regexp = "^(Federal|Estadual|Municipal|Privada)$",
-             message = "Tipo deve ser: Federal, Estadual, Municipal ou Privada")
+    @Schema(description = "Tipo da instituição", example = "Estadual")
     private String tipo;
 
     @Schema(description = "CNPJ da instituição", example = "12.345.678/0001-90")
-    @ValidCNPJ
     private String cnpj;
 
     @Schema(description = "Natureza jurídica detalhada", example = "Autarquia Estadual")
-    @Size(max = 100, message = "Natureza jurídica deve ter no máximo 100 caracteres")
     @JsonProperty("natureza_juridica")
     private String naturezaJuridica;
 
@@ -78,12 +63,10 @@ public class InstituicaoCreateDTO {
 
     @Schema(description = "URL do logotipo da instituição",
             example = "https://uepb.edu.br/assets/logo.png")
-    @Size(max = 500, message = "URL do logo deve ter no máximo 500 caracteres")
     @JsonProperty("logo_url")
     private String logoUrl;
 
     @Schema(description = "Site oficial da instituição", example = "https://uepb.edu.br")
-    @Size(max = 500, message = "Website deve ter no máximo 500 caracteres")
     private String website;
 
     @Schema(description = "Data de fundação da instituição", example = "1987-04-05T00:00:00")
@@ -98,10 +81,25 @@ public class InstituicaoCreateDTO {
     private String rorId;
 
     @Schema(description = "Se a instituição está ativa no sistema", example = "true")
-    @Builder.Default
-    private Boolean ativo = true;
+    private Boolean ativo;
 
     @Schema(description = "Configurações específicas da instituição")
-    @Builder.Default
-    private Map<String, Object> configuracoes = Map.of();
+    private Map<String, Object> configuracoes;
+
+    @Schema(description = "Data de criação do registro", example = "2024-01-15T10:30:00")
+    @JsonProperty("created_at")
+    private LocalDateTime createdAt;
+
+    @Schema(description = "Data da última atualização", example = "2024-01-15T10:30:00")
+    @JsonProperty("updated_at")
+    private LocalDateTime updatedAt;
+
+    @Schema(description = "Endereço formatado completo",
+            example = "Rua Baraúnas, 351 - Campina Grande - PB")
+    @JsonProperty("endereco_completo")
+    private String enderecoCompleto;
+
+    @Schema(description = "Email ou telefone principal", example = "contato@uepb.edu.br")
+    @JsonProperty("contato_principal")
+    private String contatoPrincipal;
 }
