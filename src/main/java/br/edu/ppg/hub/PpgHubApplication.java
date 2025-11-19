@@ -7,8 +7,10 @@ import io.swagger.v3.oas.annotations.info.License;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.Environment;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -22,6 +24,8 @@ import java.net.UnknownHostException;
  * @version 0.1.0
  */
 @SpringBootApplication
+@EnableFeignClients
+@EnableScheduling
 @Slf4j
 @OpenAPIDefinition(
         info = @Info(

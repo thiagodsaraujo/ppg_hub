@@ -187,6 +187,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 
+    @ExceptionHandler(OpenAlexException.class)
+    public ResponseEntity<ErrorResponse> handleOpenAlexException(OpenAlexException ex, HttpServletRequest request) {
+        log.error("OpenAlex integration error - Path: {}", request.getRequestURI(), ex);
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_GATEWAY.value())
+                .error("Bad Gateway")
+                .message("Erro na integração com OpenAlex: " + ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex, HttpServletRequest request) {
         log.error("Unexpected error - Path: {}", request.getRequestURI(), ex);

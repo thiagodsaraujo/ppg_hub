@@ -61,6 +61,14 @@ spring:
     time-zone: America/Sao_Paulo
     default-property-inclusion: non_null
 
+  # Cache Configuration
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=7d
+    cache-names:
+      - openalex
+
 # Server Configuration
 server:
   port: 8000
@@ -133,3 +141,9 @@ ppg:
       - http://localhost:3000
       - http://localhost:8080
       - http://localhost:4200
+
+# OpenAlex Integration Configuration
+openalex:
+  api:
+    url: https://api.openalex.org
+    timeout: 10000  # 10 seconds
