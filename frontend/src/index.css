@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-gum-black;
+  }
+
+  body {
+    @apply bg-gum-white text-gum-black font-sans antialiased;
+  }
+}
+
+@layer components {
+  /* BOTÃO NEO-BRUTALISTA */
+  .btn-brutal {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 font-bold
+           border-2 border-gum-black rounded-md shadow-brutal
+           transition-all duration-200
+           hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-brutal-lg
+           active:translate-x-[2px] active:translate-y-[2px] active:shadow-brutal-sm;
+  }
+
+  .btn-primary {
+    @apply btn-brutal bg-gum-pink text-gum-black;
+  }
+
+  .btn-secondary {
+    @apply btn-brutal bg-gum-yellow text-gum-black;
+  }
+
+  .btn-outline {
+    @apply btn-brutal bg-gum-white text-gum-black;
+  }
+
+  /* CARD NEO-BRUTALISTA */
+  .card-brutal {
+    @apply bg-gum-white border-2 border-gum-black rounded-md overflow-hidden
+           transition-shadow duration-200
+           hover:shadow-brutal;
+  }
+
+  /* INPUT NEO-BRUTALISTA */
+  .input-brutal {
+    @apply w-full px-4 py-3 border-2 border-gum-black rounded-md
+           bg-gum-gray-50 text-gum-black font-medium
+           focus:outline-none focus:ring-0 focus:border-gum-black focus:bg-white
+           placeholder:text-gum-gray-300;
+  }
+
+  /* BADGE/PILL */
+  .badge-brutal {
+    @apply inline-flex items-center px-3 py-1 border-2 border-gum-black
+           rounded-full font-bold text-sm;
+  }
+}
