@@ -54,32 +54,31 @@ O sistema busca resolver:
          │
          ▼
  ┌─────────────────┐
- │   n8n Workflows │───▶ Supabase (Postgres)
+ │   Consumo da API do OpenAlex dos docentes/dicentes do PPG em especifico │───▶ (Postgres)
+ └─────────────────┘
+         │
+         ▼
+ ┌─────────────────┐
+ │   Outros dados Acadêmicos necessários para Gestão do PPG
  └─────────────────┘
          │
          ▼
  ┌─────────────────┐
  │   FastAPI APIs  │───▶ Dashboards / Relatórios
- └─────────────────┘
-         │
-         ▼
-  (Coordenação / Docentes / Secretaria)
+ └─────────────────┘       
+          │
+          ▼
+  FrontEnd/ (Coordenação / Docentes / Secretaria)
 
 # Fluxos principais
 
-ETL (n8n): coleta OpenAlex, planilhas internas, valida e insere no Supabase.
+ETL (Python): coleta OpenAlex, planilhas internas, valida e insere no Supabase.
 
-API Layer (FastAPI): expõe endpoints RESTful com autenticação e RBAC.
+API Layer (FastAPI): expõe endpoints RESTful com autenticação JWT e RBAC.
 
 Analytics (Gemini + Views SQL): gera insights e relatórios CAPES.
 
 Dashboards (Frontend): exibe KPIs e métricas em tempo real
-
-O ChatGPT disse:
-
-Boa, Thiago 👍 — então vamos simplificar o documento: vamos manter SQLAlchemy 2.x como ORM, mas sem Alembic agora. A modelagem inicial será criada via scripts manuais (SQL) ou metadata.create_all(). No futuro, quando o schema estabilizar, você entra com Alembic para migrações versionadas.
-
-Aqui está a versão reestruturada do documento em Markdown:
 
 # 📘 PPG Analytics Hub – Visão Geral do Projeto
 
@@ -113,7 +112,7 @@ O sistema busca resolver:
   - Extensões: `uuid-ossp`, `pg_trgm`, `unaccent`, `pg_stat_statements`  
 
 ### Orquestração / ETL
-- **n8n** (cron jobs, ingestão OpenAlex, processamento CSV/XLS, integração com Gemini).  
+- **Python** (cron jobs, ingestão OpenAlex, processamento CSV/XLS, integração com Gemini).  
 
 ### IA / Analytics
 - **Google Gemini API** para análise de resumos, tendências e insights.  
@@ -137,7 +136,7 @@ O sistema busca resolver:
          │
          ▼
  ┌─────────────────┐
- │   n8n Workflows │───▶ Supabase (Postgres)
+ │   Python  │───▶  (Postgres)
  └─────────────────┘
          │
          ▼
@@ -150,7 +149,7 @@ O sistema busca resolver:
 
 Fluxos principais
 
-ETL (n8n): coleta OpenAlex, planilhas internas, valida e insere no Supabase.
+ETL (Python): coleta OpenAlex, planilhas internas, valida e insere no Supabase.
 
 API Layer (FastAPI): expõe endpoints RESTful com autenticação e RBAC.
 

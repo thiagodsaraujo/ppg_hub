@@ -4,6 +4,8 @@ from typing import Mapping, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 from app.models.docente import Docente
+from app.schemas.docente import DocenteCreate
+
 
 class DocenteRepository:
     """Persistência de Docente."""
@@ -11,11 +13,14 @@ class DocenteRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def create(self, payload: dict) -> Docente:
-        docente = Docente(**payload)
-        self.db.add(docente)
-        self.db.flush()
-        return docente
+    def create(self, payload: DocenteCreate) -> Docente:
+        """Cria um Docente a partir do schema Pydantic."""
+        data = payload.model_dump(exclude_unset=True)   # ✅ converte Pydantic -> dict
+        obj = Docente(**data)
+        self.db.add(obj)
+        self.db.commit()
+        self.db.refresh(obj)
+        return obj
 
     def get(self, docente_id: int) -> Docente | None:
         return self.db.get(Docente, docente_id)
